@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlobeCloud — Global Database Platform</title>
+  <link rel="icon" href="/assets/svg/logo-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/css/product.css?v=8" />
+</head>
+<body>
+  <nav class="landing-nav">
+    <a href="/" class="logo">
+      <img src="/assets/svg/logo-mark.svg" alt="GlobeCloud" class="logo-mark" />
+      Globe<span>Cloud</span>
+    </a>
+    <div class="landing-nav-actions">
+      <a href="/api/docs" class="btn btn-secondary">API Docs</a>
+      <a href="/app" class="btn btn-primary">Open console</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>Run a multi-region database from one console.</h1>
+    <p>Route requests to US, EU, or AP. Sync SQLite replicas. Ask the copilot — answers include sources.</p>
+    <p class="hero-status" id="hero-status">Loading status…</p>
+    <div class="hero-actions">
+      <a href="/app" class="btn btn-primary">Open console →</a>
+      <a href="#features" class="btn btn-secondary">Features</a>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <ul class="features-list">
+      <li>
+        <strong>Global routing</strong>
+        Latency-aware region selection with health probes and circuit breakers.
+      </li>
+      <li>
+        <strong>Multi-region sync</strong>
+        Replication logs keep inventory and knowledge docs aligned across regions.
+      </li>
+      <li>
+        <strong>Grounded copilot</strong>
+        Ask in plain English. Responses cite retrieved documents and flag low confidence.
+      </li>
+    </ul>
+  </section>
+
+  <section id="global-infra" class="global-infra-section">
+    <h2>Regions</h2>
+    <p class="muted small" style="margin-bottom:0.75rem">Live status from your running instance</p>
+    <div id="global-fleet">
+      <p class="muted">Loading…</p>
+    </div>
+  </section>
+
+  <section class="pricing">
+    <h2>Pricing</h2>
+    <div class="grid grid-2">
+      <div class="card pricing-card featured">
+        <p class="muted">Developer</p>
+        <div class="price">$0</div>
+        <p class="muted small">Self-hosted</p>
+        <ul>
+          <li>3 regional nodes</li>
+          <li>Geo routing simulator</li>
+          <li>RAG agent (mock or OpenAI)</li>
+          <li>REST API + web console</li>
+        </ul>
+        <a href="/app" class="btn btn-primary" style="width:100%">Get started</a>
+      </div>
+      <div class="card pricing-card">
+        <p class="muted">Production</p>
+        <div class="price">Custom</div>
+        <p class="muted small">Deploy on Fly.io</p>
+        <ul>
+          <li>Global gateway + 3 regions</li>
+          <li>Geo-routed API proxy</li>
+          <li>API key + replication auth</li>
+          <li>Custom domain</li>
+        </ul>
+        <a href="/api/docs" class="btn btn-secondary" style="width:100%">View API</a>
+      </div>
+    </div>
+  </section>
+
+  <script src="/assets/js/viz.js?v=8"></script>
+  <script src="/assets/js/landing.js?v=8"></script>
+  <script async src="/assets/js/vendor/chart.umd.min.js?v=8"></script>
+</body>
+</html>

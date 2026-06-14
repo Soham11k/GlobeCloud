@@ -1,0 +1,14 @@
+data/
+.env
+.env.deploy
+.tunnel-url
+__pycache__/
+*.pyc
+*.sqlite
+.venv/
+dist/
+src/globe/static/dist/
+frontend/node_modules/
+*.egg-info/
+.DS_Store
+.qodo/

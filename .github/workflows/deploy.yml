@@ -1,0 +1,64 @@
+name: Deploy GlobeCloud
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: pip install -e .
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Smoke test (local)
+        run: |
+          nohup globe > /tmp/globe.log 2>&1 &
+          sleep 4
+          ./scripts/smoke-test.sh
+
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy global fleet
+        env:
+          API_KEY: ${{ secrets.GLOBECLOUD_API_KEY }}
+          REPLICATION_SECRET: ${{ secrets.GLOBECLOUD_REPLICATION_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          chmod +x scripts/deploy-global-fly.sh
+          ./scripts/deploy-global-fly.sh
+
+      - name: Post-deploy smoke test
+        env:
+          API_KEY: ${{ secrets.GLOBECLOUD_API_KEY }}
+          BASE_URL: https://globecloud.fly.dev
+        run: ./scripts/smoke-test.sh

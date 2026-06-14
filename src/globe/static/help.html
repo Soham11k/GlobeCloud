@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help — GlobeCloud</title>
+  <link rel="icon" href="/assets/svg/logo-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/css/product.css?v=8" />
+</head>
+<body>
+  <nav class="landing-nav">
+    <a href="/" class="logo">
+      <img src="/assets/svg/logo-mark.svg" alt="GlobeCloud" class="logo-mark" />
+      Globe<span>Cloud</span>
+    </a>
+    <div class="landing-nav-actions">
+      <a href="/app" class="btn btn-primary">Open console</a>
+      <a href="/api/docs" class="btn btn-secondary">API Docs</a>
+    </div>
+  </nav>
+
+  <main class="help-page">
+    <h1>Help &amp; troubleshooting</h1>
+    <p class="muted">Quick answers for hosts and demo visitors.</p>
+
+    <h2>For demo visitors</h2>
+    <ul>
+      <li>Open the <a href="/app">console</a> and follow the <strong>Getting started</strong> checklist on Overview.</li>
+      <li>Click <strong>Run demo flow</strong> for an automated walkthrough.</li>
+      <li>Leave the API key blank unless your host gave you one.</li>
+      <li>If buttons do nothing, refresh the page and check your connection.</li>
+    </ul>
+
+    <h2>For hosts sharing a demo</h2>
+    <ul>
+      <li>Run <code>./scripts/setup.sh</code> once, then <code>./scripts/share-demo.sh</code>.</li>
+      <li>Share the <code>/app</code> URL printed when the tunnel starts.</li>
+      <li>Keep your machine awake while the tunnel is running.</li>
+      <li>Verify with <code>./scripts/smoke-test.sh</code> before sharing.</li>
+    </ul>
+
+    <h2>Common issues</h2>
+    <ul>
+      <li><strong>401 / invalid API key</strong> — Click <strong>Clear key</strong> in Settings and refresh.</li>
+      <li><strong>Cannot reach API</strong> — Ensure GlobeCloud is running (<code>./scripts/start-clean.sh</code>).</li>
+      <li><strong>Slow console</strong> — Kill zombie on port 8001: <code>./scripts/start-clean.sh</code>.</li>
+      <li><strong>Connection refused (tunnel)</strong> — Restart the server, then restart the tunnel.</li>
+    </ul>
+
+    <h2>More documentation</h2>
+    <ul>
+      <li><a href="/api/docs">API reference (Swagger)</a></li>
+      <li>Getting started guide (see <code>docs/GETTING_STARTED.md</code> in the repo)</li>
+      <li>Cloudflare tunnel details (see <code>docs/TUNNEL.md</code> in the repo)</li>
+    </ul>
+  </main>
+</body>
+</html>

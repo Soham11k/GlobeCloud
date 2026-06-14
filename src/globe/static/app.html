@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title>Console — GlobeCloud</title>
+  <link rel="icon" href="/assets/svg/logo-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/css/product.css?v=9" />
+</head>
+<body class="has-bottom-nav">
+  <script>
+    /* Inline nav — works even if external JS fails or is cached stale */
+    (function () {
+      var TITLES = { overview: "Overview", fleet: "Global Fleet", routing: "Routing", inventory: "Inventory", replication: "Replication", copilot: "Copilot" };
+      function switchPanel(name) {
+        document.querySelectorAll(".nav-item[data-panel], .bottom-nav-item[data-panel]").forEach(function (el) {
+          el.classList.toggle("active", el.getAttribute("data-panel") === name);
+        });
+        document.querySelectorAll(".panel").forEach(function (el) {
+          el.classList.toggle("active", el.id === "panel-" + name);
+        });
+        var title = document.getElementById("panel-title");
+        if (title) title.textContent = TITLES[name] || name;
+        window.__globePanel = name;
+      }
+      document.addEventListener("click", function (e) {
+        var nav = e.target.closest(".nav-item[data-panel], .bottom-nav-item[data-panel]");
+        if (nav) {
+          e.preventDefault();
+          switchPanel(nav.getAttribute("data-panel"));
+        }
+      }, true);
+      window.globeSwitchPanel = switchPanel;
+    })();
+  </script>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a href="/" class="logo">
+        <img src="/assets/svg/logo-mark.svg" alt="" class="logo-mark" />
+        Globe<span>Cloud</span>
+      </a>
+      <nav class="sidebar-nav" aria-label="Console">
+        <button type="button" class="nav-item active" data-action="nav" data-panel="overview">Overview</button>
+        <button type="button" class="nav-item" data-action="nav" data-panel="fleet" id="nav-fleet" hidden>Fleet</button>
+        <button type="button" class="nav-item" data-action="nav" data-panel="routing">Routing</button>
+        <button type="button" class="nav-item" data-action="nav" data-panel="inventory">Inventory</button>
+        <button type="button" class="nav-item" data-action="nav" data-panel="replication">Replication</button>
+        <button type="button" class="nav-item" data-action="nav" data-panel="copilot">Copilot</button>
+      </nav>
+      <div class="sidebar-footer sidebar-footer-desktop">
+        <label class="field-label" for="api-key-input" id="api-key-label">API key (optional)</label>
+        <input id="api-key-input" type="password" placeholder="X-API-Key" autocomplete="off" />
+        <button type="button" class="btn btn-secondary small" data-action="clear-key">Clear key</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="connection-banner" class="connection-banner" role="alert" hidden></div>
+
+      <header class="topbar">
+        <h1 id="panel-title">Overview</h1>
+        <div class="topbar-actions">
+          <span id="health-badge" class="badge badge-muted">connecting…</span>
+          <span id="llm-badge" class="badge badge-muted">—</span>
+          <span id="gateway-badge" class="badge badge-success" hidden>gateway</span>
+          <button type="button" class="btn btn-secondary btn-settings" data-action="open-settings">Settings</button>
+        </div>
+      </header>
+
+      <!-- Overview -->
+      <section id="panel-overview" class="panel active">
+        <div class="card" id="checklist-card">
+          <h3>Getting started</h3>
+          <ol class="checklist">
+            <li class="checklist-item" data-step="connected"><span class="checklist-icon">○</span> Server connected</li>
+            <li class="checklist-item" data-step="routed"><span class="checklist-icon">○</span> Run a route</li>
+            <li class="checklist-item" data-step="ordered"><span class="checklist-icon">○</span> Place an order</li>
+            <li class="checklist-item" data-step="asked"><span class="checklist-icon">○</span> Ask the copilot</li>
+          </ol>
+          <div class="actions-row">
+            <button type="button" class="btn btn-primary" data-action="demo">Run demo flow</button>
+            <button type="button" class="btn btn-primary" data-action="sync">Sync now</button>
+            <button type="button" class="btn btn-secondary" data-action="nav" data-panel="copilot">Open copilot</button>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-item"><span class="stat-label">Regions</span><span class="stat-value" id="stat-regions">—</span></div>
+          <div class="stat-item"><span class="stat-label">Healthy routes</span><span class="stat-value" id="stat-healthy">—</span></div>
+          <div class="stat-item"><span class="stat-label">Sync cycles</span><span class="stat-value" id="stat-cycles">—</span></div>
+          <div class="stat-item"><span class="stat-label">Cache hit rate</span><span class="stat-value" id="stat-cache">—</span></div>
+        </div>
+        <div class="grid grid-2 overview-panels">
+          <div class="card"><h3>Region health</h3><div id="overview-regions"></div></div>
+          <div class="card"><h3>Latency</h3><div class="chart-wrap-lg"><canvas id="overview-latency-chart"></canvas></div></div>
+        </div>
+      </section>
+
+      <!-- Fleet (gateway) -->
+      <section id="panel-fleet" class="panel"><div id="fleet-cards"><p class="muted">Loading…</p></div></section>
+
+      <!-- Routing -->
+      <section id="panel-routing" class="panel">
+        <div class="routing-layout">
+          <div class="card"><svg id="routing-map-svg" class="world-map" viewBox="0 0 1000 500"></svg></div>
+          <div>
+            <div class="card">
+              <h3>Route from lat/lon</h3>
+              <label class="field-label" for="route-lat">Latitude</label>
+              <input id="route-lat" type="number" step="0.01" value="40.71" />
+              <label class="field-label" for="route-lon">Longitude</label>
+              <input id="route-lon" type="number" step="0.01" value="-74.01" />
+              <label class="field-label" for="route-preferred">Preferred region</label>
+              <select id="route-preferred">
+                <option value="">Auto — lowest latency</option>
+                <option value="us-east-1">us-east-1</option>
+                <option value="eu-west-1">eu-west-1</option>
+                <option value="ap-south-1">ap-south-1</option>
+              </select>
+              <div class="actions-row">
+                <button type="button" class="btn btn-primary" data-action="route">Route request</button>
+                <button type="button" class="btn btn-secondary" data-action="geolocate">Use my location</button>
+              </div>
+              <p class="small muted">Presets</p>
+              <div class="preset-chips">
+                <button type="button" class="preset-chip" data-action="preset" data-lat="40.71" data-lon="-74.01">NYC</button>
+                <button type="button" class="preset-chip" data-action="preset" data-lat="51.51" data-lon="-0.13">London</button>
+                <button type="button" class="preset-chip" data-action="preset" data-lat="19.08" data-lon="72.88">Mumbai</button>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Result</h3>
+              <div id="route-result" class="muted small">Run a route to see region selection.</div>
+              <div class="chart-wrap-md"><canvas id="routing-latency-chart"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inventory -->
+      <section id="panel-inventory" class="panel">
+        <div class="region-tabs">
+          <button type="button" class="region-tab active" data-action="region" data-region="us-east-1">us-east-1</button>
+          <button type="button" class="region-tab" data-action="region" data-region="eu-west-1">eu-west-1</button>
+          <button type="button" class="region-tab" data-action="region" data-region="ap-south-1">ap-south-1</button>
+        </div>
+        <select id="inv-region" hidden aria-hidden="true">
+          <option value="us-east-1">us-east-1</option>
+          <option value="eu-west-1">eu-west-1</option>
+          <option value="ap-south-1">ap-south-1</option>
+        </select>
+        <button type="button" class="btn btn-secondary" data-action="refresh-products">Refresh</button>
+        <div id="inv-remote-note"></div>
+        <div id="product-grid" class="product-grid"></div>
+        <div class="inventory-table-wrap table-scroll">
+          <table>
+            <thead><tr><th>Product</th><th>SKU</th><th>Price</th><th>Stock</th><th></th></tr></thead>
+            <tbody id="products-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Replication -->
+      <section id="panel-replication" class="panel">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>Sync engine</h3>
+            <svg id="sync-topology-svg" width="100%" height="180"></svg>
+            <div id="sync-summary" class="muted small">Loading…</div>
+            <button type="button" class="btn btn-primary" data-action="sync">Force sync</button>
+          </div>
+          <div class="card">
+            <h3>Regional lag</h3>
+            <div class="chart-wrap-lg"><canvas id="lag-bars-chart"></canvas></div>
+            <div id="sync-lag"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Copilot -->
+      <section id="panel-copilot" class="panel">
+        <div class="card chat-box">
+          <div id="chat-messages" class="chat-messages">
+            <div class="msg agent">Ask about replication, routing, or inventory.</div>
+          </div>
+          <div class="prompt-links">
+            <button type="button" class="prompt-link" data-action="ask-prompt" data-prompt="How does cross-region replication work?">Replication overview</button>
+            <button type="button" class="prompt-link" data-action="ask-prompt" data-prompt="Which region has the lowest latency?">Fastest region</button>
+          </div>
+          <div class="copilot-input-row">
+            <input id="chat-input" placeholder="Ask a question…" />
+            <button type="button" class="btn btn-primary" data-action="ask">Ask</button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="console-footer">
+        <a href="/api/docs" target="_blank" rel="noopener">API Docs</a> · <a href="/help">Help</a> · <a href="/">Home</a>
+      </footer>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Mobile navigation">
+    <button type="button" class="bottom-nav-item active" data-action="nav" data-panel="overview">Overview</button>
+    <button type="button" class="bottom-nav-item" data-action="nav" data-panel="fleet" id="bottom-nav-fleet" hidden>Fleet</button>
+    <button type="button" class="bottom-nav-item" data-action="nav" data-panel="routing">Routing</button>
+    <button type="button" class="bottom-nav-item" data-action="nav" data-panel="inventory">Inventory</button>
+    <button type="button" class="bottom-nav-item" data-action="nav" data-panel="replication">Sync</button>
+    <button type="button" class="bottom-nav-item" data-action="nav" data-panel="copilot">Copilot</button>
+  </nav>
+
+  <div class="settings-drawer" id="settings-drawer" aria-hidden="true">
+    <div class="settings-backdrop" data-action="close-settings"></div>
+    <div class="settings-panel">
+      <h2>Settings</h2>
+      <label class="field-label" for="api-key-input-mobile" id="api-key-label-mobile">API key (optional)</label>
+      <input id="api-key-input-mobile" type="password" placeholder="X-API-Key" autocomplete="off" />
+      <button type="button" class="btn btn-secondary small" data-action="clear-key">Clear key</button>
+      <button type="button" class="btn btn-secondary" data-action="reset-tutorial">Reset tutorial</button>
+      <button type="button" class="btn btn-secondary" data-action="close-settings">Close</button>
+    </div>
+  </div>
+
+  <script src="/assets/js/api.js?v=9"></script>
+  <script src="/assets/js/app.js?v=9"></script>
+  <script defer src="/assets/js/viz.js?v=9"></script>
+  <script defer src="/assets/js/vendor/chart.umd.min.js?v=9"></script>
+</body>
+</html>

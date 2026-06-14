@@ -1,0 +1,53 @@
+services:
+  us-east-1:
+    build: .
+    ports:
+      - "8001:8000"
+    environment:
+      DEPLOYMENT_MODE: regional
+      REGION_ID: us-east-1
+      PEER_URLS: "eu-west-1:http://eu-west-1:8000,ap-south-1:http://ap-south-1:8000"
+      REPLICATION_SECRET: dev-replication-secret
+      DATA_DIR: /data
+    volumes:
+      - us_data:/data
+    networks:
+      - globecloud
+
+  eu-west-1:
+    build: .
+    ports:
+      - "8002:8000"
+    environment:
+      DEPLOYMENT_MODE: regional
+      REGION_ID: eu-west-1
+      PEER_URLS: "us-east-1:http://us-east-1:8000,ap-south-1:http://ap-south-1:8000"
+      REPLICATION_SECRET: dev-replication-secret
+      DATA_DIR: /data
+    volumes:
+      - eu_data:/data
+    networks:
+      - globecloud
+
+  ap-south-1:
+    build: .
+    ports:
+      - "8003:8000"
+    environment:
+      DEPLOYMENT_MODE: regional
+      REGION_ID: ap-south-1
+      PEER_URLS: "us-east-1:http://us-east-1:8000,eu-west-1:http://eu-west-1:8000"
+      REPLICATION_SECRET: dev-replication-secret
+      DATA_DIR: /data
+    volumes:
+      - ap_data:/data
+    networks:
+      - globecloud
+
+networks:
+  globecloud:
+
+volumes:
+  us_data:
+  eu_data:
+  ap_data:
