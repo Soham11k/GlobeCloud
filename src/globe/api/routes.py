@@ -26,6 +26,25 @@ class KnowledgeRequest(BaseModel):
     body: str = Field(min_length=10, max_length=4000)
 
 
+class KnowledgeImportItem(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    body: str = Field(min_length=10, max_length=4000)
+    region: Optional[str] = None
+
+
+class ProductRequest(BaseModel):
+    sku: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=200)
+    price: float = Field(gt=0)
+    stock: int = Field(ge=0)
+    id: Optional[str] = Field(default=None, max_length=64)
+
+
+class ProductImportRequest(BaseModel):
+    products: List[ProductRequest] = Field(min_length=1, max_length=500)
+    knowledge: Optional[List[KnowledgeImportItem]] = None
+
+
 class AgentRequest(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
     client_lat: float = 40.0
@@ -45,6 +64,13 @@ def _agent_response(result) -> dict:
         "tool_trace": result.tool_trace,
         "inference": result.inference,
     }
+
+
+async def _rebuild_rag_async(cluster: DatabaseCluster, rag: RAGIndex, settings) -> None:
+    if settings.is_regional:
+        rag.rebuild(await cluster.all_knowledge())
+    else:
+        rag.rebuild(cluster.all_knowledge_sync())
 
 
 def build_api_router(
@@ -186,6 +212,54 @@ def build_api_router(
         else:
             rag.rebuild(cluster.all_knowledge_sync())
         return doc
+
+    @api.post("/regions/{region_id}/products")
+    async def create_product(region_id: str, body: ProductRequest) -> dict:
+        if not cluster.is_local(region_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Products can only be created in the local region on this node",
+            )
+        try:
+            product = await cluster.create_product(
+                region_id,
+                body.sku,
+                body.name,
+                body.price,
+                body.stock,
+                product_id=body.id,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _rebuild_rag_async(cluster, rag, settings)
+        return product
+
+    @api.post("/regions/{region_id}/products/import")
+    async def import_products(region_id: str, body: ProductImportRequest) -> dict:
+        if not cluster.is_local(region_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Catalog import only allowed on the local region on this node",
+            )
+        try:
+            result = await cluster.import_catalog(
+                region_id,
+                [p.model_dump() for p in body.products],
+                [k.model_dump() for k in body.knowledge] if body.knowledge else None,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _rebuild_rag_async(cluster, rag, settings)
+        return {
+            "region": region_id,
+            "imported_products": len(result["products"]),
+            "imported_knowledge": len(result["knowledge"]),
+            **result,
+        }
 
     @api.get("/knowledge/search")
     async def search_knowledge(

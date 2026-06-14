@@ -21,6 +21,14 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
+# Override stale shell exports when .env leaves API_KEY empty
+if [[ -f .env ]]; then
+  env_api=$(grep '^API_KEY=' .env | cut -d= -f2- || true)
+  if [[ -z "${env_api// /}" ]]; then
+    unset API_KEY
+  fi
+fi
+
 echo "==> Starting GlobeCloud on http://127.0.0.1:${PORT}"
 echo "    Console: http://127.0.0.1:${PORT}/app"
 echo "    Press Ctrl+C to stop"

@@ -1,0 +1,42 @@
+{
+  "products": [
+    {
+      "id": "sku-001",
+      "sku": "GC-STARTER",
+      "name": "GlobeCloud Starter Plan",
+      "price": 49.0,
+      "stock": 500
+    },
+    {
+      "id": "sku-002",
+      "sku": "GC-PRO",
+      "name": "GlobeCloud Pro Plan",
+      "price": 199.0,
+      "stock": 120
+    },
+    {
+      "id": "sku-003",
+      "sku": "GC-ENTERPRISE",
+      "name": "GlobeCloud Enterprise",
+      "price": 999.0,
+      "stock": 25
+    }
+  ],
+  "knowledge": [
+    {
+      "title": "Pricing overview",
+      "region": "us-east-1",
+      "body": "GlobeCloud Starter includes 3 regions and 10GB storage. Pro adds dedicated replication and priority routing. Enterprise includes custom SLAs and dedicated support."
+    },
+    {
+      "title": "Data residency",
+      "region": "eu-west-1",
+      "body": "EU customers can pin reads and writes to eu-west-1. Replication to other regions is asynchronous and configurable per tenant."
+    },
+    {
+      "title": "Support SLAs",
+      "region": "ap-south-1",
+      "body": "Enterprise customers receive 15-minute response SLAs during business hours across all regions. Starter and Pro plans use community support with 24-hour response targets."
+    }
+  ]
+}

@@ -44,10 +44,15 @@ async def demo_flow(base_url: str, api_key: str = "") -> None:
         print(json.dumps(products, indent=2))
         print()
 
+        product_list = products.get("products", [])
+        if not product_list:
+            raise SystemExit("No products in catalog — run ./scripts/import-catalog.sh --local")
+        product_id = product_list[0]["id"]
+
         order = await _post(
             client,
             f"{api}/regions/{region}/orders",
-            {"product_id": "prod-001", "quantity": 2},
+            {"product_id": product_id, "quantity": 2},
         )
         print("Created order:")
         print(json.dumps(order, indent=2))

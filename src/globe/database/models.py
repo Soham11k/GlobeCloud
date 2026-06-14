@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 import uuid
@@ -10,6 +11,30 @@ from pathlib import Path
 from typing import Iterator
 
 from globe.database.peer import PeerClient
+
+
+def load_catalog_seed(path: Path) -> tuple[list[tuple], list[tuple]]:
+    """Load products and knowledge from a JSON catalog file.
+
+    Products: list of {id, sku, name, price, stock}
+    Knowledge: list of {title, region, body}
+    """
+    data = json.loads(path.read_text(encoding="utf-8"))
+    products: list[tuple] = []
+    for item in data.get("products", []):
+        products.append(
+            (
+                item["id"],
+                item["sku"],
+                item["name"],
+                float(item["price"]),
+                int(item["stock"]),
+            )
+        )
+    knowledge: list[tuple] = []
+    for item in data.get("knowledge", []):
+        knowledge.append((item["title"], item["region"], item["body"]))
+    return products, knowledge
 
 
 def utcnow() -> str:
@@ -116,9 +141,18 @@ SEED_KNOWLEDGE = (
 
 
 class RegionalDatabase:
-    def __init__(self, region_id: str, path: Path) -> None:
+    def __init__(
+        self,
+        region_id: str,
+        path: Path,
+        *,
+        seed_demo_data: bool = True,
+        catalog_seed_file: str = "",
+    ) -> None:
         self.region_id = region_id
         self.path = path
+        self._seed_demo_data = seed_demo_data
+        self._catalog_seed_file = catalog_seed_file
         self._lock = threading.RLock()
         path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
@@ -132,23 +166,39 @@ class RegionalDatabase:
         with self._lock, self._connect() as conn:
             conn.executescript(SCHEMA)
             if conn.execute("SELECT COUNT(*) FROM products").fetchone()[0] == 0:
-                now = utcnow()
-                conn.executemany(
-                    "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
-                    [
-                        (pid, sku, name, price, stock, now)
-                        for pid, sku, name, price, stock in SEED_PRODUCTS
-                    ],
-                )
-                conn.executemany(
-                    "INSERT INTO knowledge_docs VALUES (?, ?, ?, ?, ?)",
-                    [
-                        (str(uuid.uuid4()), title, body, doc_region, utcnow())
-                        for title, doc_region, body in SEED_KNOWLEDGE
-                        if doc_region == self.region_id
-                    ],
-                )
+                self._seed_catalog(conn)
             conn.commit()
+
+    def _seed_catalog(self, conn: sqlite3.Connection) -> None:
+        products: list[tuple] = []
+        knowledge: list[tuple] = []
+
+        if self._catalog_seed_file:
+            seed_path = Path(self._catalog_seed_file)
+            if seed_path.is_file():
+                products, knowledge = load_catalog_seed(seed_path)
+        elif self._seed_demo_data:
+            products = list(SEED_PRODUCTS)
+            knowledge = list(SEED_KNOWLEDGE)
+
+        if not products and not knowledge:
+            return
+
+        now = utcnow()
+        if products:
+            conn.executemany(
+                "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
+                [(pid, sku, name, price, stock, now) for pid, sku, name, price, stock in products],
+            )
+        if knowledge:
+            conn.executemany(
+                "INSERT INTO knowledge_docs VALUES (?, ?, ?, ?, ?)",
+                [
+                    (str(uuid.uuid4()), title, body, doc_region, utcnow())
+                    for title, doc_region, body in knowledge
+                    if doc_region == self.region_id
+                ],
+            )
 
     @contextmanager
     def connection(self) -> Iterator[sqlite3.Connection]:
@@ -174,6 +224,72 @@ class RegionalDatabase:
                 (product_id,),
             ).fetchone()
         return dict(row) if row else None
+
+    def create_product(
+        self,
+        sku: str,
+        name: str,
+        price: float,
+        stock: int,
+        *,
+        product_id: str | None = None,
+    ) -> dict:
+        pid = product_id or str(uuid.uuid4())
+        now = utcnow()
+        with self.connection() as conn:
+            existing = conn.execute(
+                "SELECT id FROM products WHERE id = ?", (pid,)
+            ).fetchone()
+            if existing:
+                raise ValueError(f"Product already exists: {pid}")
+            conn.execute(
+                "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
+                (pid, sku, name, price, stock, now),
+            )
+            self._append_replication(
+                conn,
+                table_name="products",
+                row_id=pid,
+                operation="INSERT",
+                payload={
+                    "sku": sku,
+                    "name": name,
+                    "price": price,
+                    "stock": stock,
+                    "updated_at": now,
+                },
+            )
+        return {
+            "id": pid,
+            "sku": sku,
+            "name": name,
+            "price": price,
+            "stock": stock,
+            "updated_at": now,
+        }
+
+    def import_catalog(
+        self,
+        products: list[dict],
+        knowledge: list[dict] | None = None,
+    ) -> dict:
+        created_products: list[dict] = []
+        created_docs: list[dict] = []
+        for item in products:
+            created_products.append(
+                self.create_product(
+                    item["sku"],
+                    item["name"],
+                    float(item["price"]),
+                    int(item["stock"]),
+                    product_id=item.get("id"),
+                )
+            )
+        for item in knowledge or []:
+            if item.get("region", self.region_id) != self.region_id:
+                continue
+            created_docs.append(self.append_knowledge(item["title"], item["body"]))
+        return {"products": created_products, "knowledge": created_docs}
 
     def create_order(self, product_id: str, quantity: int) -> dict:
         order_id = str(uuid.uuid4())
@@ -327,7 +443,22 @@ class RegionalDatabase:
             payload = json.loads(payload)
 
         with self.connection() as conn:
-            if entry["table_name"] == "products" and entry["operation"] == "UPDATE":
+            if entry["table_name"] == "products" and entry["operation"] == "INSERT":
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO products
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        entry["row_id"],
+                        payload["sku"],
+                        payload["name"],
+                        payload["price"],
+                        payload["stock"],
+                        payload["updated_at"],
+                    ),
+                )
+            elif entry["table_name"] == "products" and entry["operation"] == "UPDATE":
                 delta = payload["stock_delta"]
                 conn.execute(
                     """
@@ -426,16 +557,24 @@ class DatabaseCluster:
         peer_urls: dict | None = None,
         api_key: str = "",
         replication_secret: str = "",
+        seed_demo_data: bool = True,
+        catalog_seed_file: str = "",
     ) -> None:
         self.data_dir = data_dir
         self.deployment_mode = deployment_mode
         self.local_region_id = region_id
         self.peer_urls = peer_urls or {}
         self.peers: dict[str, PeerClient] = {}
+        db_kwargs = {
+            "seed_demo_data": seed_demo_data,
+            "catalog_seed_file": catalog_seed_file,
+        }
 
         if self.deployment_mode == "regional":
             self.regions: dict[str, RegionalDatabase] = {
-                region_id: RegionalDatabase(region_id, data_dir / f"{region_id}.sqlite")
+                region_id: RegionalDatabase(
+                    region_id, data_dir / f"{region_id}.sqlite", **db_kwargs
+                )
             }
             for peer_id, url in self.peer_urls.items():
                 self.peers[peer_id] = PeerClient(
@@ -446,7 +585,7 @@ class DatabaseCluster:
                 )
         else:
             self.regions = {
-                cfg.id: RegionalDatabase(cfg.id, data_dir / f"{cfg.id}.sqlite")
+                cfg.id: RegionalDatabase(cfg.id, data_dir / f"{cfg.id}.sqlite", **db_kwargs)
                 for cfg in REGIONS
             }
 
@@ -481,6 +620,32 @@ class DatabaseCluster:
         if not peer:
             raise KeyError(f"Unknown region: {region_id}")
         return await peer.create_order(product_id, quantity)
+
+    async def create_product(
+        self,
+        region_id: str,
+        sku: str,
+        name: str,
+        price: float,
+        stock: int,
+        *,
+        product_id: str | None = None,
+    ) -> dict:
+        if not self.is_local(region_id):
+            raise KeyError(f"Products can only be created in local region: {region_id}")
+        return self.get(region_id).create_product(
+            sku, name, price, stock, product_id=product_id
+        )
+
+    async def import_catalog(
+        self,
+        region_id: str,
+        products: list[dict],
+        knowledge: list[dict] | None = None,
+    ) -> dict:
+        if not self.is_local(region_id):
+            raise KeyError(f"Catalog import only allowed on local region: {region_id}")
+        return self.get(region_id).import_catalog(products, knowledge)
 
     async def get_knowledge(self, region_id: str) -> list[dict]:
         if self.is_local(region_id):

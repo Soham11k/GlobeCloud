@@ -117,6 +117,8 @@ def create_app() -> FastAPI:
         peer_urls=settings.peers,
         api_key=settings.api_key,
         replication_secret=settings.replication_secret,
+        seed_demo_data=settings.seed_demo_data,
+        catalog_seed_file=settings.catalog_seed_file,
     )
     router = GeoRouter(
         deployment_mode=settings.deployment_mode,

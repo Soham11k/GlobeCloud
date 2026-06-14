@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from globe.api.auth import require_api_key
-from globe.api.routes import AgentRequest, KnowledgeRequest, OrderRequest
+from globe.api.routes import AgentRequest, KnowledgeRequest, OrderRequest, ProductImportRequest, ProductRequest
 from globe.config import get_settings
 from globe.database.models import REGIONS
 from globe.database.peer import PeerClient
@@ -152,6 +152,34 @@ def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
                 region_id,
                 "POST",
                 f"/api/v1/regions/{region_id}/knowledge",
+                json_body=body.model_dump(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail=format_proxy_error(exc)) from exc
+
+    @api.post("/regions/{region_id}/products")
+    async def create_product(region_id: str, body: ProductRequest) -> dict:
+        try:
+            return await proxy.proxy_json(
+                region_id,
+                "POST",
+                f"/api/v1/regions/{region_id}/products",
+                json_body=body.model_dump(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail=format_proxy_error(exc)) from exc
+
+    @api.post("/regions/{region_id}/products/import")
+    async def import_products(region_id: str, body: ProductImportRequest) -> dict:
+        try:
+            return await proxy.proxy_json(
+                region_id,
+                "POST",
+                f"/api/v1/regions/{region_id}/products/import",
                 json_body=body.model_dump(),
             )
         except KeyError as exc:

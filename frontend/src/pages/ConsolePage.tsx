@@ -22,6 +22,7 @@ import {
 import { useProduct, useHealth, useSyncMutation, useRouteMutation, useOrderMutation, useAgentMutation } from "@/lib/hooks";
 import { api, setApiKey, getApiKey } from "@/lib/api";
 import { CHECKLIST_KEY } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 const TITLES: Record<string, string> = {
   "/app": "Overview",
@@ -35,6 +36,7 @@ const TITLES: Record<string, string> = {
 export function ConsolePage() {
   const location = useLocation();
   const nav = useConsoleNav();
+  const queryClient = useQueryClient();
   const { data: product } = useProduct();
   const { data: health } = useHealth();
   const syncMut = useSyncMutation();
@@ -178,26 +180,44 @@ export function ConsolePage() {
           <div className="space-y-4 mt-4">
             <div>
               <label className="text-xs text-muted-foreground">
-                API key {product?.auth_required ? "(required)" : "(optional)"}
+                GlobeCloud API key {product?.auth_required ? "(required)" : "(leave blank for local dev)"}
               </label>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                Not your OpenAI key — only needed when the host set <code className="text-xs">API_KEY</code> on the server.
+              </p>
               <Input
                 type="password"
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="X-API-Key"
+                placeholder="Paste host-provided key"
                 className="mt-1"
               />
-              <Button
-                className="mt-2 w-full"
-                size="sm"
-                onClick={() => {
-                  setApiKey(apiKeyInput.trim());
-                  toast.success("API key saved");
-                  setSettingsOpen(false);
-                }}
-              >
-                Save key
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  className="flex-1"
+                  size="sm"
+                  onClick={() => {
+                    setApiKey(apiKeyInput.trim());
+                    queryClient.invalidateQueries();
+                    toast.success("API key saved — refreshing data");
+                    setSettingsOpen(false);
+                  }}
+                >
+                  Save key
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setApiKeyInput("");
+                    setApiKey("");
+                    queryClient.invalidateQueries();
+                    toast.success("API key cleared");
+                  }}
+                >
+                  Clear
+                </Button>
+              </div>
             </div>
             <Button
               variant="secondary"

@@ -127,3 +127,89 @@ source .venv/bin/activate
 globe-cli demo
 globe-cli demo --base-url https://YOUR-URL.trycloudflare.com
 ```
+
+---
+
+## Replacing demo data with real data
+
+GlobeCloud ships with demo SKUs by default. To use your own catalog, knowledge, OpenAI copilot, and global infrastructure:
+
+### 1. Real OpenAI copilot
+
+Add to `.env`:
+
+```bash
+OPENAI_API_KEY=sk-your-key
+```
+
+Restart the server. Verify: `curl http://127.0.0.1:8000/api/v1/health` shows `"llm_mode": "openai"`.
+
+For Fly.io, export `OPENAI_API_KEY` before running `./scripts/deploy-global-fly.sh` (set on regional apps automatically).
+
+### 2. Custom product catalog (local)
+
+Edit [`seed/catalog.json`](../seed/catalog.json) with your products and knowledge docs, then:
+
+```bash
+chmod +x scripts/import-catalog.sh
+./scripts/import-catalog.sh --local
+./scripts/start-clean.sh
+```
+
+This sets `SEED_DEMO_DATA=0`, points `CATALOG_SEED_FILE` at your JSON, wipes `data/`, and loads your catalog on first start.
+
+### 3. Custom catalog via API (running server or Fly)
+
+```bash
+export API_KEY=your-key
+./scripts/import-catalog.sh --api --sync
+# Or target a specific region/backend:
+BASE_URL=https://globecloud-us.fly.dev REGION=us-east-1 API_KEY=... ./scripts/import-catalog.sh --api
+```
+
+Import to **one** regional backend (typically `us-east-1`), then run sync so products replicate to EU/AP.
+
+You can also add individual products:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/regions/us-east-1/products \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sku":"MY-SKU","name":"My Product","price":9.99,"stock":100}'
+```
+
+### 4. Add knowledge docs
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/regions/us-east-1/knowledge \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Returns policy","body":"Customers may return within 30 days..."}'
+```
+
+Knowledge replicates across regions automatically.
+
+### 5. Real multi-region (not simulated locally)
+
+Deploy the global Fly fleet — see [DEPLOY.md](DEPLOY.md). This gives real HTTP latency probes, persistent regional SQLite volumes, and a public gateway URL.
+
+Local multi-container preview:
+
+```bash
+docker compose -f deploy/docker-compose.regional.yml up
+```
+
+### Catalog JSON format
+
+```json
+{
+  "products": [
+    {"id": "sku-001", "sku": "MY-SKU", "name": "Product name", "price": 9.99, "stock": 100}
+  ],
+  "knowledge": [
+    {"title": "Doc title", "region": "us-east-1", "body": "Content for the copilot..."}
+  ]
+}
+```
+
+Set `SEED_DEMO_DATA=0` in `.env` to skip demo SKUs. Leave `SIMULATE_FAILURES` unset to avoid artificial routing failures in local mode.
