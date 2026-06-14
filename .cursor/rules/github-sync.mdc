@@ -1,0 +1,15 @@
+---
+description: Push GlobeCloud changes to GitHub after completing work
+alwaysApply: true
+---
+
+# GitHub sync
+
+When the user asks to update GitHub, keep GitHub updated, publish changes, or sync the repo:
+
+1. After finishing code/docs/script changes, commit and push to `origin/main` at `https://github.com/Soham11k/GlobeCloud.git`.
+2. Use `./scripts/publish-github.sh` or follow the git safety protocol: never commit `.env`, `.env.deploy`, or secrets.
+3. Write a concise commit message focused on why the change was made.
+4. Confirm the commit hash and repo URL in the response.
+
+If there are no changes to commit, say the repo is already up to date.
