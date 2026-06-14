@@ -13,23 +13,22 @@ from typing import Iterator
 from globe.database.peer import PeerClient
 
 
-def load_catalog_seed(path: Path) -> tuple[list[tuple], list[tuple]]:
-    """Load products and knowledge from a JSON catalog file.
-
-    Products: list of {id, sku, name, price, stock}
-    Knowledge: list of {title, region, body}
-    """
+def load_catalog_seed(path: Path) -> tuple[list[dict], list[tuple]]:
+    """Load products and knowledge from a JSON catalog file."""
     data = json.loads(path.read_text(encoding="utf-8"))
-    products: list[tuple] = []
+    products: list[dict] = []
     for item in data.get("products", []):
         products.append(
-            (
-                item["id"],
-                item["sku"],
-                item["name"],
-                float(item["price"]),
-                int(item["stock"]),
-            )
+            {
+                "id": item["id"],
+                "sku": item["sku"],
+                "name": item["name"],
+                "price": float(item["price"]),
+                "stock": int(item["stock"]),
+                "description": item.get("description", ""),
+                "category": item.get("category", "general"),
+                "image_url": item.get("image_url", ""),
+            }
         )
     knowledge: list[tuple] = []
     for item in data.get("knowledge", []):
@@ -165,9 +164,20 @@ class RegionalDatabase:
     def _init_db(self) -> None:
         with self._lock, self._connect() as conn:
             conn.executescript(SCHEMA)
+            self._migrate(conn)
             if conn.execute("SELECT COUNT(*) FROM products").fetchone()[0] == 0:
                 self._seed_catalog(conn)
             conn.commit()
+
+    def _migrate(self, conn: sqlite3.Connection) -> None:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(products)")}
+        for col, ddl in (
+            ("description", "ALTER TABLE products ADD COLUMN description TEXT NOT NULL DEFAULT ''"),
+            ("category", "ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'general'"),
+            ("image_url", "ALTER TABLE products ADD COLUMN image_url TEXT NOT NULL DEFAULT ''"),
+        ):
+            if col not in cols:
+                conn.execute(ddl)
 
     def _seed_catalog(self, conn: sqlite3.Connection) -> None:
         products: list[tuple] = []
@@ -186,10 +196,37 @@ class RegionalDatabase:
 
         now = utcnow()
         if products:
-            conn.executemany(
-                "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
-                [(pid, sku, name, price, stock, now) for pid, sku, name, price, stock in products],
-            )
+            if isinstance(products[0], dict):
+                conn.executemany(
+                    """
+                    INSERT INTO products
+                    (id, sku, name, price, stock, updated_at, description, category, image_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (
+                            p["id"],
+                            p["sku"],
+                            p["name"],
+                            p["price"],
+                            p["stock"],
+                            now,
+                            p.get("description", ""),
+                            p.get("category", "general"),
+                            p.get("image_url", ""),
+                        )
+                        for p in products
+                    ],
+                )
+            else:
+                conn.executemany(
+                    """
+                    INSERT INTO products
+                    (id, sku, name, price, stock, updated_at, description, category, image_url)
+                    VALUES (?, ?, ?, ?, ?, ?, '', 'general', '')
+                    """,
+                    [(pid, sku, name, price, stock, now) for pid, sku, name, price, stock in products],
+                )
         if knowledge:
             conn.executemany(
                 "INSERT INTO knowledge_docs VALUES (?, ?, ?, ?, ?)",
@@ -213,8 +250,49 @@ class RegionalDatabase:
     def list_products(self) -> list[dict]:
         with self.connection() as conn:
             rows = conn.execute(
-                "SELECT id, sku, name, price, stock, updated_at FROM products ORDER BY name"
+                """
+                SELECT id, sku, name, price, stock, updated_at,
+                       description, category, image_url
+                FROM products ORDER BY name
+                """
             ).fetchall()
+        return [dict(row) for row in rows]
+
+    def search_products(self, q: str = "", category: str = "") -> list[dict]:
+        query = """
+            SELECT id, sku, name, price, stock, updated_at,
+                   description, category, image_url
+            FROM products WHERE 1=1
+        """
+        params: list = []
+        if q:
+            query += " AND (name LIKE ? OR sku LIKE ? OR description LIKE ?)"
+            like = f"%{q}%"
+            params.extend([like, like, like])
+        if category:
+            query += " AND category = ?"
+            params.append(category)
+        query += " ORDER BY name"
+        with self.connection() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_orders(self, limit: int = 50, since: str = "") -> list[dict]:
+        query = """
+            SELECT o.id, o.product_id, o.quantity, o.region, o.created_at,
+                   p.name AS product_name, p.sku
+            FROM orders o
+            LEFT JOIN products p ON p.id = o.product_id
+            WHERE o.region = ?
+        """
+        params: list = [self.region_id]
+        if since:
+            query += " AND o.created_at >= ?"
+            params.append(since)
+        query += " ORDER BY o.created_at DESC LIMIT ?"
+        params.append(limit)
+        with self.connection() as conn:
+            rows = conn.execute(query, params).fetchall()
         return [dict(row) for row in rows]
 
     def get_product(self, product_id: str) -> dict | None:
@@ -233,6 +311,9 @@ class RegionalDatabase:
         stock: int,
         *,
         product_id: str | None = None,
+        description: str = "",
+        category: str = "general",
+        image_url: str = "",
     ) -> dict:
         pid = product_id or str(uuid.uuid4())
         now = utcnow()
@@ -243,8 +324,12 @@ class RegionalDatabase:
             if existing:
                 raise ValueError(f"Product already exists: {pid}")
             conn.execute(
-                "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
-                (pid, sku, name, price, stock, now),
+                """
+                INSERT INTO products
+                (id, sku, name, price, stock, updated_at, description, category, image_url)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (pid, sku, name, price, stock, now, description, category, image_url),
             )
             self._append_replication(
                 conn,
@@ -257,6 +342,9 @@ class RegionalDatabase:
                     "price": price,
                     "stock": stock,
                     "updated_at": now,
+                    "description": description,
+                    "category": category,
+                    "image_url": image_url,
                 },
             )
         return {
@@ -266,6 +354,9 @@ class RegionalDatabase:
             "price": price,
             "stock": stock,
             "updated_at": now,
+            "description": description,
+            "category": category,
+            "image_url": image_url,
         }
 
     def import_catalog(
@@ -283,6 +374,9 @@ class RegionalDatabase:
                     float(item["price"]),
                     int(item["stock"]),
                     product_id=item.get("id"),
+                    description=item.get("description", ""),
+                    category=item.get("category", "general"),
+                    image_url=item.get("image_url", ""),
                 )
             )
         for item in knowledge or []:
@@ -447,7 +541,8 @@ class RegionalDatabase:
                 conn.execute(
                     """
                     INSERT OR IGNORE INTO products
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (id, sku, name, price, stock, updated_at, description, category, image_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         entry["row_id"],
@@ -456,6 +551,9 @@ class RegionalDatabase:
                         payload["price"],
                         payload["stock"],
                         payload["updated_at"],
+                        payload.get("description", ""),
+                        payload.get("category", "general"),
+                        payload.get("image_url", ""),
                     ),
                 )
             elif entry["table_name"] == "products" and entry["operation"] == "UPDATE":
@@ -612,6 +710,32 @@ class DatabaseCluster:
         if not peer:
             raise KeyError(f"Unknown region: {region_id}")
         return await peer.list_products()
+
+    async def list_orders(
+        self, region_id: str, *, limit: int = 50, since: str = ""
+    ) -> list[dict]:
+        if not self.is_local(region_id):
+            raise KeyError(f"Orders only available for local region: {region_id}")
+        return self.get(region_id).list_orders(limit=limit, since=since)
+
+    async def search_catalog(
+        self, region_id: str, q: str = "", category: str = ""
+    ) -> list[dict]:
+        if self.is_local(region_id):
+            return self.get(region_id).search_products(q, category)
+        products = await self.get_products(region_id)
+        if not q and not category:
+            return products
+        result = []
+        for p in products:
+            if category and p.get("category") != category:
+                continue
+            if q:
+                blob = f"{p.get('name','')} {p.get('sku','')} {p.get('description','')}".lower()
+                if q.lower() not in blob:
+                    continue
+            result.append(p)
+        return result
 
     async def create_order(self, region_id: str, product_id: str, quantity: int) -> dict:
         if self.is_local(region_id):

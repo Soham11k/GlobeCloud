@@ -88,6 +88,23 @@ export function CommandPalette({
               >
                 Force sync
               </Command.Item>
+              <Command.Item
+                onSelect={() =>
+                  run(() => navigate("/app/routing"))
+                }
+                className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm aria-selected:bg-accent/15"
+              >
+                Route from NYC
+              </Command.Item>
+              {["us-east-1", "eu-west-1", "ap-south-1"].map((r) => (
+                <Command.Item
+                  key={r}
+                  onSelect={() => run(() => navigate("/app/inventory"))}
+                  className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm aria-selected:bg-accent/15"
+                >
+                  Region: {r}
+                </Command.Item>
+              ))}
             </Command.Group>
           </Command.List>
         </Command>

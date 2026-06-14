@@ -60,6 +60,7 @@ export function RoutingPanel({
             selected={route.data?.selected_region}
             probes={route.data?.probes}
             client={{ lat: parseFloat(lat), lon: parseFloat(lon) }}
+            showArc={!!route.data?.selected_region}
             className="w-full h-64 lg:h-80"
           />
         </Card>

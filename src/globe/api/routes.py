@@ -13,6 +13,7 @@ from globe.api.auth import require_api_key, require_replication_secret
 from globe.config import get_settings
 from globe.database.models import REGIONS, DatabaseCluster
 from globe.database.sync import ReplicationEngine
+from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
 
 
@@ -80,6 +81,7 @@ def build_api_router(
     rag: RAGIndex,
     llm: InferenceClient,
     agent: DatabaseAgent,
+    observ: Optional[ObservabilityStore] = None,
 ) -> APIRouter:
     settings = get_settings()
     api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
@@ -143,6 +145,20 @@ def build_api_router(
     ) -> dict:
         region, probes = await router.route(client_lat, client_lon, preferred_region)
         selected_probe = next((p for p in probes if p.region_id == region.id), None)
+        if observ:
+            observ.record_routing(
+                client_lat,
+                client_lon,
+                region.id,
+                [
+                    {
+                        "region_id": p.region_id,
+                        "latency_ms": None if p.latency_ms == float("inf") else round(p.latency_ms, 2),
+                        "healthy": p.healthy,
+                    }
+                    for p in probes
+                ],
+            )
         return {
             "selected_region": region.id,
             "selected_name": region.name,
@@ -339,6 +355,92 @@ def build_api_router(
                 for h in router.snapshot()
             ],
         }
+
+    @api.get("/metrics/history")
+    async def metrics_history(
+        metric: str = Query("latency_ms"),
+        region_id: Optional[str] = None,
+        since_hours: float = Query(24, ge=1, le=168),
+        limit: int = Query(500, ge=1, le=2000),
+    ) -> dict:
+        if not observ:
+            return {"metric": metric, "points": []}
+        return {
+            "metric": metric,
+            "points": observ.metrics_history(
+                metric, region_id=region_id, since_hours=since_hours, limit=limit
+            ),
+        }
+
+    @api.get("/metrics/summary")
+    async def metrics_summary(
+        metric: str = Query("latency_ms"),
+        since_hours: float = Query(24, ge=1, le=168),
+    ) -> dict:
+        if not observ:
+            return {"metric": metric, "summary": {"count": 0}}
+        return {"metric": metric, "summary": observ.metrics_summary(metric, since_hours)}
+
+    @api.get("/regions/{region_id}/orders")
+    async def regional_orders(
+        region_id: str,
+        limit: int = Query(50, ge=1, le=200),
+        since: str = Query(""),
+    ) -> dict:
+        try:
+            orders = await cluster.list_orders(region_id, limit=limit, since=since)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"region": region_id, "orders": orders}
+
+    @api.get("/catalog/search")
+    async def catalog_search(
+        q: str = Query(""),
+        category: str = Query(""),
+        region_id: str = Query("us-east-1"),
+    ) -> dict:
+        try:
+            products = await cluster.search_catalog(region_id, q, category)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"region": region_id, "query": q, "category": category, "products": products}
+
+    @api.get("/activity")
+    async def activity(limit: int = Query(50, ge=1, le=200)) -> dict:
+        if not observ:
+            return {"items": []}
+        return {"items": observ.activity_feed(limit=limit)}
+
+    @api.get("/audit")
+    async def audit(
+        limit: int = Query(100, ge=1, le=500),
+        status: Optional[int] = None,
+    ) -> dict:
+        if not observ:
+            return {"entries": []}
+        return {"entries": observ.list_audit(limit=limit, status=status)}
+
+    @api.get("/stream/metrics")
+    async def stream_metrics() -> StreamingResponse:
+        async def generate():
+            while True:
+                payload = {
+                    "router": [
+                        {
+                            "region_id": h.region_id,
+                            "healthy": h.healthy,
+                            "latency_ms": None
+                            if h.latency_ms == float("inf")
+                            else round(h.latency_ms, 2),
+                        }
+                        for h in router.snapshot()
+                    ],
+                    "sync": replicator.status(),
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                await asyncio.sleep(5)
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
 
     @repl.get("/log")
     async def replication_log(since: int = Query(0, ge=0)) -> dict:

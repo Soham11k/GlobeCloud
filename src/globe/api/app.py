@@ -15,6 +15,8 @@ from globe.config import get_settings
 from globe.database.models import DatabaseCluster
 from globe.database.sync import ReplicationEngine
 from globe.gateway.proxy import GatewayProxy
+from globe.observability.sampler import MetricsSampler, observability_path
+from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
 
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
@@ -127,6 +129,8 @@ def create_app() -> FastAPI:
     )
     replicator = ReplicationEngine(cluster)
     rag = RAGIndex()
+    observ = ObservabilityStore(observability_path(data_dir))
+    app.state.observ = observ
 
     def _rebuild_rag() -> None:
         if settings.is_regional:
@@ -136,8 +140,9 @@ def create_app() -> FastAPI:
     replicator.on_sync = _rebuild_rag
     llm = InferenceClient()
     agent = DatabaseAgent(cluster, router, replicator, rag, llm)
+    sampler = MetricsSampler(observ, cluster, router, replicator, llm)
 
-    api, repl = build_api_router(cluster, router, replicator, rag, llm, agent)
+    api, repl = build_api_router(cluster, router, replicator, rag, llm, agent, observ)
     app.include_router(api)
     app.include_router(repl)
 
@@ -148,9 +153,11 @@ def create_app() -> FastAPI:
         else:
             rag.rebuild(cluster.all_knowledge_sync())
         await replicator.start()
+        await sampler.start()
 
     @app.on_event("shutdown")
     async def shutdown() -> None:
+        await sampler.stop()
         await replicator.stop()
 
     _mount_static(app)

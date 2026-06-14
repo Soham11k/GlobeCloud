@@ -5,21 +5,30 @@
       "sku": "GC-STARTER",
       "name": "GlobeCloud Starter Plan",
       "price": 49.0,
-      "stock": 500
+      "stock": 500,
+      "category": "plans",
+      "description": "Three regional SQLite nodes, geo routing, and grounded copilot for small teams.",
+      "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=200&fit=crop"
     },
     {
       "id": "sku-002",
       "sku": "GC-PRO",
       "name": "GlobeCloud Pro Plan",
       "price": 199.0,
-      "stock": 120
+      "stock": 120,
+      "category": "plans",
+      "description": "Priority replication, dedicated routing probes, and OpenAI-powered copilot.",
+      "image_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=200&fit=crop"
     },
     {
       "id": "sku-003",
       "sku": "GC-ENTERPRISE",
       "name": "GlobeCloud Enterprise",
       "price": 999.0,
-      "stock": 25
+      "stock": 25,
+      "category": "plans",
+      "description": "Global gateway, custom SLAs, audit logs, and multi-key API access.",
+      "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop"
     }
   ],
   "knowledge": [

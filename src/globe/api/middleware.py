@@ -28,6 +28,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             "duration_ms": duration_ms,
         }
         logger.info(json.dumps(log_entry))
+        store = getattr(request.app.state, "observ", None)
+        if store and request.url.path.startswith("/api/"):
+            store.record_audit(
+                request_id,
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
         response.headers["X-Request-Id"] = request_id
         return response
 

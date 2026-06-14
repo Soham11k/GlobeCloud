@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   api,
   type HealthInfo,
@@ -8,7 +9,11 @@ import {
   type SyncStatus,
   type Product,
   type AgentResponse,
+  type Order,
+  type ActivityItem,
+  type MetricPoint,
 } from "./api";
+import { pushMetric, sparklineData } from "./metricsBuffer";
 
 export function useProduct() {
   return useQuery({
@@ -27,11 +32,60 @@ export function useHealth() {
 }
 
 export function useMetrics() {
-  return useQuery({
+  const q = useQuery({
     queryKey: ["metrics"],
     queryFn: () => api<MetricsInfo>("/metrics"),
     refetchInterval: 15000,
   });
+  useEffect(() => {
+    q.data?.router.forEach((r) => {
+      if (r.latency_ms != null) pushMetric(`latency:${r.region_id}`, r.latency_ms);
+    });
+    if (q.data?.inference_cache?.hit_rate != null) {
+      pushMetric("cache_hit", q.data.inference_cache.hit_rate * 100);
+    }
+  }, [q.data]);
+  return q;
+}
+
+export function useMetricsHistory(metric = "latency_ms", sinceHours = 24) {
+  return useQuery({
+    queryKey: ["metrics-history", metric, sinceHours],
+    queryFn: () =>
+      api<{ points: MetricPoint[] }>(
+        `/metrics/history?metric=${metric}&since_hours=${sinceHours}`
+      ),
+    refetchInterval: 30000,
+  });
+}
+
+export function useMetricsStream(enabled = true) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/v1/stream/metrics");
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          qc.setQueryData(["metrics-stream"], data);
+          data.router?.forEach((r: { region_id: string; latency_ms: number | null }) => {
+            if (r.latency_ms != null) pushMetric(`latency:${r.region_id}`, r.latency_ms);
+          });
+        } catch {
+          /* ignore */
+        }
+      };
+    } catch {
+      /* SSE unavailable */
+    }
+    return () => es?.close();
+  }, [enabled, qc]);
+}
+
+export function useSparkline(key: string) {
+  return sparklineData(key);
 }
 
 export function useSyncStatus() {
@@ -39,6 +93,23 @@ export function useSyncStatus() {
     queryKey: ["sync"],
     queryFn: () => api<SyncStatus>("/sync/status"),
     refetchInterval: 5000,
+  });
+}
+
+export function useActivity() {
+  return useQuery({
+    queryKey: ["activity"],
+    queryFn: () => api<{ items: ActivityItem[] }>("/activity"),
+    refetchInterval: 10000,
+  });
+}
+
+export function useOrders(region: string) {
+  return useQuery({
+    queryKey: ["orders", region],
+    queryFn: () => api<{ orders: Order[] }>(`/regions/${region}/orders?limit=50`),
+    enabled: !!region,
+    refetchInterval: 15000,
   });
 }
 
@@ -87,7 +158,10 @@ export function useOrderMutation() {
         method: "POST",
         body: JSON.stringify({ product_id: productId, quantity: 1 }),
       }),
-    onSuccess: (_, { region }) => qc.invalidateQueries({ queryKey: ["products", region] }),
+    onSuccess: (_, { region }) => {
+      qc.invalidateQueries({ queryKey: ["products", region] });
+      qc.invalidateQueries({ queryKey: ["orders", region] });
+    },
   });
 }
 

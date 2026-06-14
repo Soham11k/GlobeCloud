@@ -23,6 +23,8 @@ import { useProduct, useHealth, useSyncMutation, useRouteMutation, useOrderMutat
 import { api, setApiKey, getApiKey } from "@/lib/api";
 import { CHECKLIST_KEY } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
 
 const TITLES: Record<string, string> = {
   "/app": "Overview",
@@ -49,6 +51,7 @@ export function ConsolePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(getApiKey());
+  const { theme, setTheme } = useTheme();
 
   const isGateway = product?.deployment_mode === "gateway";
   const title = TITLES[location.pathname] || "Console";
@@ -216,6 +219,27 @@ export function ConsolePage() {
                   }}
                 >
                   Clear
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Theme</label>
+              <div className="flex gap-2 mt-1">
+                <Button
+                  variant={theme === "light" ? "default" : "secondary"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setTheme("light")}
+                >
+                  <Sun className="h-4 w-4" /> Light
+                </Button>
+                <Button
+                  variant={theme === "dark" ? "default" : "secondary"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setTheme("dark")}
+                >
+                  <Moon className="h-4 w-4" /> Dark
                 </Button>
               </div>
             </div>

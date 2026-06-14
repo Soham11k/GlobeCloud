@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSyncStatus, useSyncMutation } from "@/lib/hooks";
+import { pushMetric } from "@/lib/metricsBuffer";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import {
   BarChart,
@@ -16,6 +18,10 @@ import {
 export function ReplicationPanel() {
   const { data: sync, isLoading } = useSyncStatus();
   const syncRun = useSyncMutation();
+
+  useEffect(() => {
+    if (sync?.cycles != null) pushMetric("sync", sync.cycles);
+  }, [sync?.cycles]);
 
   const lagEntries: { label: string; value: number }[] = [];
   if (sync?.regions) {
@@ -53,7 +59,9 @@ export function ReplicationPanel() {
                   Object.entries(sync.regions).map(([id, r]) => (
                     <div key={id} className="flex justify-between py-1 border-b border-border/50">
                       <span>{id}</span>
-                      <span className="text-muted-foreground">{r.stats?.entries ?? 0} entries</span>
+                      <span className="text-muted-foreground">
+                        {r.stats?.replication_log_entries ?? r.stats?.entries ?? 0} entries
+                      </span>
                     </div>
                   ))}
               </div>

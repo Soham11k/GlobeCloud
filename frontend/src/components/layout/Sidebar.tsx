@@ -79,7 +79,7 @@ export function Sidebar({
 
 export function MobileNav({ isGateway }: { isGateway: boolean }) {
   const location = useLocation();
-  const items = NAV.filter((n) => !n.gateway || isGateway).slice(0, 5);
+  const items = NAV.filter((n) => !n.gateway || isGateway);
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-border bg-card/95 backdrop-blur-xl pb-safe">

@@ -93,6 +93,35 @@ export type Product = {
   sku: string;
   price: number;
   stock: number;
+  description?: string;
+  category?: string;
+  image_url?: string;
+};
+
+export type Order = {
+  id: string;
+  product_id: string;
+  product_name?: string;
+  sku?: string;
+  quantity: number;
+  region: string;
+  created_at: string;
+};
+
+export type ActivityItem = {
+  type: string;
+  ts: string;
+  summary: string;
+  duration_ms?: number;
+  selected_region?: string;
+};
+
+export type MetricPoint = {
+  ts: string;
+  region_id?: string;
+  metric: string;
+  value: number;
+  labels?: Record<string, unknown>;
 };
 
 export type SyncStatus = {
@@ -100,7 +129,15 @@ export type SyncStatus = {
   cycles: number;
   regions?: Record<
     string,
-    { stats?: { entries?: number }; sync_lag?: { peer_region: string; behind_by: number }[] }
+    {
+      stats?: {
+        products?: number;
+        orders?: number;
+        replication_log_entries?: number;
+        entries?: number;
+      };
+      sync_lag?: { peer_region: string; behind_by: number }[];
+    }
   >;
 };
 
