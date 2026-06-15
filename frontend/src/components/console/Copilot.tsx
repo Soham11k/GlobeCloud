@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { Send, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -132,9 +133,15 @@ export function CopilotPanel({
                   </div>
                 )}
                 {msg.meta?.citations?.map((c, j) => (
-                  <div key={j} className="mt-2 p-2 rounded bg-background/50 text-xs border border-border">
+                  <motion.div
+                    key={j}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: j * 0.08, duration: 0.25 }}
+                    className="mt-2 p-2 rounded bg-background/50 text-xs border border-border"
+                  >
                     <strong>{c.title}</strong> · {c.region}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>

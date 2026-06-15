@@ -80,7 +80,7 @@ export function CommandPalette({
                 onSelect={() => run(onDemo)}
                 className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm aria-selected:bg-accent/15"
               >
-                Run demo flow
+                Run guided tour
               </Command.Item>
               <Command.Item
                 onSelect={() => run(onSync)}

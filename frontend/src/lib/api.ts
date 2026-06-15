@@ -58,6 +58,18 @@ export type ProductInfo = {
   regions: number;
   auth_required: boolean;
   llm_mode: string;
+  is_simulated?: boolean;
+  simulation_note?: string | null;
+  catalog_products?: number;
+  knowledge_docs?: number;
+};
+
+export type CatalogInfo = {
+  region: string;
+  plans: Product[];
+  addons: Product[];
+  products_total: number;
+  knowledge_docs: number;
 };
 
 export type HealthInfo = {
@@ -127,6 +139,8 @@ export type MetricPoint = {
 export type SyncStatus = {
   running: boolean;
   cycles: number;
+  interval_s?: number;
+  mode?: string;
   regions?: Record<
     string,
     {

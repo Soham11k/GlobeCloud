@@ -5,6 +5,7 @@ import {
   type HealthInfo,
   type MetricsInfo,
   type ProductInfo,
+  type CatalogInfo,
   type RouteResult,
   type SyncStatus,
   type Product,
@@ -19,6 +20,14 @@ export function useProduct() {
   return useQuery({
     queryKey: ["product"],
     queryFn: () => api<ProductInfo>("/product"),
+    retry: 1,
+  });
+}
+
+export function useCatalog(region = "us-east-1") {
+  return useQuery({
+    queryKey: ["catalog", region],
+    queryFn: () => api<CatalogInfo>(`/catalog?region_id=${region}`),
     retry: 1,
   });
 }

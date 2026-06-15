@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { LandingPage } from "@/pages/LandingPage";
+import { LandingGate } from "@/pages/LandingGate";
+import { WelcomePage } from "@/pages/WelcomePage";
 import { ConsolePage } from "@/pages/ConsolePage";
 import { StatusPage } from "@/pages/StatusPage";
 
@@ -20,7 +21,8 @@ export default function App() {
         <TooltipProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<LandingGate />} />
+              <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/status" element={<StatusPage />} />
               <Route path="/app/*" element={<ConsolePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />

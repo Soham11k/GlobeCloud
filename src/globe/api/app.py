@@ -154,6 +154,8 @@ def create_app() -> FastAPI:
             rag.rebuild(cluster.all_knowledge_sync())
         await replicator.start()
         await sampler.start()
+        # Populate router health snapshot so landing metrics are live on first visit
+        await router.route(40.71, -74.01)
 
     @app.on_event("shutdown")
     async def shutdown() -> None:

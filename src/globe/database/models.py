@@ -13,6 +13,21 @@ from typing import Iterator
 from globe.database.peer import PeerClient
 
 
+def resolve_catalog_path(catalog_seed_file: str) -> Path | None:
+    """Resolve catalog JSON from CWD or project root."""
+    if not catalog_seed_file:
+        return None
+    direct = Path(catalog_seed_file)
+    if direct.is_file():
+        return direct
+    # src/globe/database/models.py -> repo root
+    root = Path(__file__).resolve().parents[3]
+    candidate = root / catalog_seed_file
+    if candidate.is_file():
+        return candidate
+    return None
+
+
 def load_catalog_seed(path: Path) -> tuple[list[dict], list[tuple]]:
     """Load products and knowledge from a JSON catalog file."""
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -184,8 +199,8 @@ class RegionalDatabase:
         knowledge: list[tuple] = []
 
         if self._catalog_seed_file:
-            seed_path = Path(self._catalog_seed_file)
-            if seed_path.is_file():
+            seed_path = resolve_catalog_path(self._catalog_seed_file)
+            if seed_path is not None:
                 products, knowledge = load_catalog_seed(seed_path)
         elif self._seed_demo_data:
             products = list(SEED_PRODUCTS)

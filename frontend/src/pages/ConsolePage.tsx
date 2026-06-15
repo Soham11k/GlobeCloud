@@ -58,7 +58,7 @@ export function ConsolePage() {
 
   const runDemo = useCallback(async () => {
     try {
-      toast.info("Running demo flow…");
+      toast.info("Running guided tour…");
       nav.goRouting();
       const route = await routeMut.mutateAsync({ lat: 40, lon: -74 });
       setClient({ lat: 40, lon: -74 });
@@ -86,7 +86,7 @@ export function ConsolePage() {
         client_lon: -74,
       });
       markChecklist("asked");
-      toast.success("Demo complete!");
+      toast.success("Tour complete!");
       nav.goOverview();
     } catch (e) {
       toast.error((e as Error).message);
@@ -94,7 +94,7 @@ export function ConsolePage() {
   }, [nav, routeMut, orderMut, syncMut, agentMut, isGateway]);
 
   return (
-    <div className="flex min-h-screen gradient-mesh">
+    <div className="flex min-h-screen page-shell noise-bg">
       <Sidebar
         isGateway={!!isGateway}
         onSettings={() => setSettingsOpen(true)}

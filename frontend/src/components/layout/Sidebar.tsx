@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/Logo";
 
 const NAV = [
   { to: "/app", icon: LayoutDashboard, label: "Overview", end: true },
@@ -33,13 +34,8 @@ export function Sidebar({
   const location = useLocation();
 
   return (
-    <aside className="hidden md:flex w-56 flex-col border-r border-border bg-card/40 backdrop-blur-xl p-4 gap-1 shrink-0">
-      <Link to="/" className="flex items-center gap-2 px-2 py-3 mb-2 font-semibold text-lg">
-        <Globe2 className="h-6 w-6 text-accent" />
-        <span>
-          Globe<span className="text-accent">Cloud</span>
-        </span>
-      </Link>
+    <aside className="hidden md:flex w-56 flex-col border-r border-border bg-card p-4 gap-1 shrink-0">
+      <Logo to="/app" className="px-2 py-3 mb-2" />
       <nav className="flex flex-col gap-0.5 flex-1">
         {NAV.filter((n) => !n.gateway || isGateway).map(({ to, icon: Icon, label, end }) => {
           const active = end
@@ -50,10 +46,10 @@ export function Sidebar({
               key={to}
               to={to}
               className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors border-l-2 border-transparent",
                 active
-                  ? "bg-accent/15 text-accent border-l-2 border-accent"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-muted text-foreground border-accent"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4" />

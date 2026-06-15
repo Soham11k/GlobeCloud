@@ -45,9 +45,9 @@ class Settings(BaseSettings):
     replication_secret: str = ""
     cors_origins: str = "*"
 
-    # Catalog seeding: set SEED_DEMO_DATA=0 to skip demo SKUs; optional JSON file
-    seed_demo_data: bool = True
-    catalog_seed_file: str = ""
+    # Catalog seeding: SEED_DEMO_DATA=0 loads seed/catalog.json only (no parody SKUs)
+    seed_demo_data: bool = False
+    catalog_seed_file: str = "seed/catalog.json"
 
     @property
     def llm_enabled(self) -> bool:

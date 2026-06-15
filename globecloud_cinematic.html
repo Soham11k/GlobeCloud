@@ -1,0 +1,375 @@
+
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000}
+.gc-root{background:#03030A;border-radius:18px;overflow:hidden;font-family:'Space Grotesk',sans-serif;color:#F0EDE6;position:relative}
+.gc-nav{display:flex;justify-content:space-between;align-items:center;padding:18px 32px;position:relative;z-index:20;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.gc-logo{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;letter-spacing:0.14em;color:#fff}
+.gc-logo-orb{width:22px;height:22px;border-radius:50%;border:1.5px solid #5B52FF;display:flex;align-items:center;justify-content:center;position:relative}
+.gc-logo-core{width:7px;height:7px;border-radius:50%;background:#5B52FF;animation:core-pulse 2.4s ease-in-out infinite}
+@keyframes core-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(0.6);opacity:0.4}}
+.gc-nav-links{display:flex;gap:28px;align-items:center}
+.gc-nav-links a{font-size:12px;color:rgba(255,255,255,0.28);text-decoration:none;letter-spacing:0.03em;transition:color 0.2s}
+.gc-nav-btn{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.07em;padding:7px 16px;background:rgba(91,82,255,0.12);border:0.5px solid rgba(91,82,255,0.45);border-radius:40px;color:#8B85FF;cursor:pointer}
+
+.gc-hero{position:relative;height:480px;display:flex;align-items:center;overflow:hidden}
+#gc-c{position:absolute;inset:0;width:100%;height:100%}
+
+.gc-copy{position:relative;z-index:10;padding:0 52px;max-width:480px}
+.gc-badge{display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;color:#5B52FF;text-transform:uppercase;margin-bottom:22px;padding:5px 12px 5px 8px;border:0.5px solid rgba(91,82,255,0.25);border-radius:40px;background:rgba(91,82,255,0.06)}
+.gc-badge-dot{width:5px;height:5px;border-radius:50%;background:#5B52FF;animation:core-pulse 1.8s ease-in-out infinite}
+.gc-h1{font-size:56px;font-weight:300;line-height:1.04;letter-spacing:-0.035em;color:#fff;margin-bottom:14px}
+.gc-h1 em{font-style:normal;font-weight:700;background:none;-webkit-background-clip:unset;color:#fff}
+.gc-h1 .gc-accent{color:#5B52FF}
+.gc-p{font-size:14px;color:rgba(255,255,255,0.35);line-height:1.75;margin-bottom:32px;max-width:340px}
+.gc-actions{display:flex;gap:12px;align-items:center}
+.gc-btn-cta{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:12px 24px;background:#5B52FF;border:none;border-radius:9px;color:#fff;cursor:pointer;letter-spacing:0.01em;display:flex;align-items:center;gap:7px}
+.gc-btn-ghost{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:400;padding:12px 24px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(255,255,255,0.4);cursor:pointer}
+
+.gc-ticker{display:flex;border-top:0.5px solid rgba(255,255,255,0.05)}
+.gc-tick{flex:1;padding:18px 32px;border-right:0.5px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;gap:3px}
+.gc-tick:last-child{border-right:none}
+.gc-tick-v{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:500;color:#fff;letter-spacing:-0.03em}
+.gc-tick-u{font-size:13px;opacity:0.3;font-weight:400}
+.gc-tick-l{font-size:11px;color:rgba(255,255,255,0.25);letter-spacing:0.04em}
+.gc-tick-g{color:#2DD4A0}
+.gc-tick-a{color:#F0A84A}
+
+.gc-feats{display:grid;grid-template-columns:repeat(3,1fr);border-top:0.5px solid rgba(255,255,255,0.05)}
+.gc-feat{padding:24px 32px;border-right:0.5px solid rgba(255,255,255,0.05)}
+.gc-feat:last-child{border-right:none}
+.gc-feat-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.gc-feat-icon{width:28px;height:28px;border:0.5px solid rgba(91,82,255,0.3);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#7B75FF;font-size:14px;flex-shrink:0}
+.gc-feat-name{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.55)}
+.gc-feat-desc{font-size:12px;color:rgba(255,255,255,0.3);line-height:1.65}
+.gc-feat-mono{font-family:'JetBrains Mono',monospace;font-size:10px;color:#5B52FF;margin-top:10px;letter-spacing:0.06em}
+</style>
+
+<div class="gc-root">
+  <nav class="gc-nav">
+    <div class="gc-logo">
+      <div class="gc-logo-orb"><div class="gc-logo-core"></div></div>
+      GLOBECLOUD
+    </div>
+    <div class="gc-nav-links">
+      <a href="#">Docs</a>
+      <a href="#">Pricing</a>
+      <a href="#">Blog</a>
+      <a href="#">Status</a>
+      <button class="gc-nav-btn">Sign in</button>
+    </div>
+  </nav>
+
+  <div class="gc-hero">
+    <canvas id="gc-c"></canvas>
+    <div class="gc-copy">
+      <div class="gc-badge"><span class="gc-badge-dot"></span>3-region infrastructure · now GA</div>
+      <h1 class="gc-h1">Your data,<br><em>everywhere</em><br><span class="gc-accent">at once.</span></h1>
+      <p class="gc-p">30-second replication across US, EU, and AP. Reads land on the nearest replica. Ask your docs in plain language.</p>
+      <div class="gc-actions">
+        <button class="gc-btn-cta"><i class="ti ti-terminal-2" aria-hidden="true"></i> Enter console</button>
+        <button class="gc-btn-ghost">Read the docs</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="gc-ticker">
+    <div class="gc-tick">
+      <div class="gc-tick-v gc-tick-g" id="tv1">21<span class="gc-tick-u">ms</span></div>
+      <div class="gc-tick-l">avg read latency</div>
+    </div>
+    <div class="gc-tick">
+      <div class="gc-tick-v">30<span class="gc-tick-u">s</span></div>
+      <div class="gc-tick-l">replication window</div>
+    </div>
+    <div class="gc-tick">
+      <div class="gc-tick-v">99.9<span class="gc-tick-u">%</span></div>
+      <div class="gc-tick-l">global uptime SLA</div>
+    </div>
+  </div>
+
+  <div class="gc-feats">
+    <div class="gc-feat">
+      <div class="gc-feat-top">
+        <div class="gc-feat-icon"><i class="ti ti-route" aria-hidden="true"></i></div>
+        <div class="gc-feat-name">Route</div>
+      </div>
+      <div class="gc-feat-desc">Latency-aware region selection. Reads hit the closest healthy node. Automatic failover in &lt;100ms.</div>
+      <div class="gc-feat-mono">→ geo_routing: true</div>
+    </div>
+    <div class="gc-feat">
+      <div class="gc-feat-top">
+        <div class="gc-feat-icon"><i class="ti ti-refresh" aria-hidden="true"></i></div>
+        <div class="gc-feat-name">Replicate</div>
+      </div>
+      <div class="gc-feat-desc">Append-only logs sync across regions every 30 seconds. No conflicts, no lost writes, full audit trail.</div>
+      <div class="gc-feat-mono">→ multi_region: true</div>
+    </div>
+    <div class="gc-feat">
+      <div class="gc-feat-top">
+        <div class="gc-feat-icon"><i class="ti ti-message-circle" aria-hidden="true"></i></div>
+        <div class="gc-feat-name">Ask</div>
+      </div>
+      <div class="gc-feat-desc">A grounded RAG copilot answers from your own docs. Cited, honest, never hallucinates facts outside your data.</div>
+      <div class="gc-feat-mono">→ rag_agent: openai</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const C = document.getElementById('gc-c');
+const ctx = C.getContext('2d');
+let W, H, cx, cy, R;
+
+function resize(){
+  const rect = C.parentElement.getBoundingClientRect();
+  W = rect.width; H = rect.height;
+  C.width = W * devicePixelRatio;
+  C.height = H * devicePixelRatio;
+  C.style.width = W+'px'; C.style.height = H+'px';
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  cx = W*0.72; cy = H*0.5; R = Math.min(W,H)*0.36;
+}
+resize();
+
+function hx(h,a){
+  const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+const NODES = [
+  {id:'US',label:'US-EAST-1', lat:38,lon:-97, col:'#2DD4A0', ms:12},
+  {id:'EU',label:'EU-WEST-2', lat:52,lon:13,  col:'#2DD4A0', ms:18},
+  {id:'AP',label:'AP-SOUTH-1',lat:1, lon:104, col:'#F0A84A', ms:34}
+];
+
+function project(lat,lon,spin){
+  const φ = lat*Math.PI/180;
+  const λ = (lon+spin)*Math.PI/180;
+  const x = cx + R * Math.cos(φ) * Math.sin(λ);
+  const y = cy - R * Math.sin(φ);
+  const z = Math.cos(φ)*Math.cos(λ);
+  return {x,y,z};
+}
+
+const streams = [];
+function makeStream(a,b){
+  return {a,b,t:Math.random(),speed:0.0022+Math.random()*0.0018,trail:[],col:NODES[a].col,size:1.4+Math.random()*1.2};
+}
+[[0,1],[1,2],[2,0],[1,0],[2,1],[0,2],[0,1],[1,2]].forEach(([a,b])=>streams.push(makeStream(a,b)));
+
+function bezierPt(p1,ctrl,p2,t){
+  const u=1-t;
+  return {
+    x:u*u*p1.x+2*u*t*ctrl.x+t*t*p2.x,
+    y:u*u*p1.y+2*u*t*ctrl.y+t*t*p2.y
+  };
+}
+
+let frame=0, spin=0;
+const SPIN_SPEED=0.12;
+
+function draw(){
+  requestAnimationFrame(draw);
+  frame++;
+  spin += SPIN_SPEED;
+  ctx.clearRect(0,0,W,H);
+
+  const projected = NODES.map(n=>({...n,...project(n.lat,n.lon,spin)}));
+
+  const visibleNodes = projected.filter(n=>n.z>-0.1).sort((a,b)=>a.z-b.z);
+  const allNodes = projected;
+
+  // --- grid lines ---
+  const LATS=[-60,-30,0,30,60], LONS=Array.from({length:18},(_,i)=>i*20);
+
+  LONS.forEach(lon=>{
+    ctx.beginPath();
+    for(let la=-90;la<=90;la+=4){
+      const φ=la*Math.PI/180, λ=(lon+spin)*Math.PI/180;
+      const z=Math.cos(φ)*Math.cos(λ);
+      const x=cx+R*Math.cos(φ)*Math.sin(λ);
+      const y=cy-R*Math.sin(φ);
+      const alpha=z<0?0:z*0.055;
+      if(la===-90) ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=`rgba(91,82,255,${0.055})`;
+    ctx.lineWidth=0.4;
+    ctx.stroke();
+  });
+
+  LATS.forEach(lat=>{
+    const φ=lat*Math.PI/180;
+    const ry=R*Math.sin(φ);
+    const rx=R*Math.cos(φ);
+    ctx.beginPath();
+    for(let lo=0;lo<=360;lo+=3){
+      const λ=(lo+spin)*Math.PI/180;
+      const z=Math.cos(φ)*Math.cos(λ);
+      const x=cx+R*Math.cos(φ)*Math.sin(λ);
+      const y=cy-R*Math.sin(φ);
+      if(lo===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(91,82,255,0.045)';
+    ctx.lineWidth=0.4;
+    ctx.stroke();
+  });
+
+  // globe rim
+  ctx.beginPath();
+  ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(91,82,255,0.14)';
+  ctx.lineWidth=0.8;
+  ctx.stroke();
+
+  // subtle inner fill
+  ctx.beginPath();
+  ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.fillStyle='rgba(8,6,30,0.55)';
+  ctx.fill();
+
+  // clip to globe
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.clip();
+
+  // re-draw grid INSIDE clip for depth effect
+  LONS.forEach(lon=>{
+    ctx.beginPath();
+    for(let la=-85;la<=85;la+=5){
+      const φ=la*Math.PI/180, λ=(lon+spin)*Math.PI/180;
+      const z=Math.cos(φ)*Math.cos(λ);
+      if(z<0) continue;
+      const x=cx+R*Math.cos(φ)*Math.sin(λ);
+      const y=cy-R*Math.sin(φ);
+      la===-85?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(91,82,255,0.09)';
+    ctx.lineWidth=0.4;
+    ctx.stroke();
+  });
+
+  // connection arcs between nodes
+  const edges=[[0,1],[1,2],[2,0]];
+  edges.forEach(([ai,bi])=>{
+    const na=allNodes[ai], nb=allNodes[bi];
+    if(na.z<0&&nb.z<0) return;
+    const ctrl={x:(na.x+nb.x)/2, y:Math.min(na.y,nb.y)-R*0.22};
+    const steps=60;
+    ctx.beginPath();
+    for(let s=0;s<=steps;s++){
+      const p=bezierPt(na,ctrl,nb,s/steps);
+      s===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+    }
+    ctx.strokeStyle='rgba(91,82,255,0.22)';
+    ctx.lineWidth=0.7;
+    ctx.setLineDash([3,6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // data streams
+  streams.forEach(s=>{
+    s.t+=s.speed;
+    if(s.t>=1){
+      s.t=0; s.trail=[];
+      const ai=Math.floor(Math.random()*3);
+      let bi=Math.floor(Math.random()*3);
+      while(bi===ai) bi=(bi+1)%3;
+      s.a=ai; s.b=bi; s.col=NODES[ai].col;
+    }
+    const na=allNodes[s.a], nb=allNodes[s.b];
+    const ctrl={x:(na.x+nb.x)/2, y:Math.min(na.y,nb.y)-R*0.22};
+    const p=bezierPt(na,ctrl,nb,s.t);
+    s.trail.push({...p});
+    if(s.trail.length>18) s.trail.shift();
+    s.trail.forEach((pt,ti)=>{
+      const prog=ti/s.trail.length;
+      ctx.beginPath();
+      if(ti>0){
+        ctx.moveTo(s.trail[ti-1].x,s.trail[ti-1].y);
+        ctx.lineTo(pt.x,pt.y);
+        ctx.strokeStyle=hx(s.col,prog*0.85);
+        ctx.lineWidth=s.size*prog;
+        ctx.stroke();
+      }
+    });
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,s.size+0.5,0,Math.PI*2);
+    ctx.fillStyle=s.col;
+    ctx.fill();
+  });
+
+  ctx.restore();
+
+  // node rings + labels
+  allNodes.forEach((n,i)=>{
+    if(n.z<-0.05) return;
+    const alpha=Math.max(0,n.z);
+    const pulse=0.5+0.5*Math.sin(frame*0.045+i*2.09);
+
+    // outer soft ring
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,22+pulse*8,0,Math.PI*2);
+    ctx.strokeStyle=hx(n.col,0.1*alpha);
+    ctx.lineWidth=1;
+    ctx.stroke();
+
+    // mid ring
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,13,0,Math.PI*2);
+    ctx.strokeStyle=hx(n.col,0.35*alpha);
+    ctx.lineWidth=0.7;
+    ctx.stroke();
+
+    // fill halo
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,11,0,Math.PI*2);
+    ctx.fillStyle=hx(n.col,0.08*alpha);
+    ctx.fill();
+
+    // core dot
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,5,0,Math.PI*2);
+    ctx.fillStyle=hx(n.col,alpha);
+    ctx.fill();
+
+    // label chip
+    const lx=n.x, ly=n.y-28;
+    ctx.font="500 9.5px 'JetBrains Mono',monospace";
+    ctx.textAlign='center';
+    ctx.fillStyle=`rgba(255,255,255,${0.28*alpha})`;
+    ctx.fillText(n.label,lx,ly);
+
+    ctx.font="600 12px 'JetBrains Mono',monospace";
+    ctx.fillStyle=hx(n.col,alpha);
+    ctx.fillText(n.ms+'ms',lx,ly-14);
+  });
+
+  // scanline sweep (subtle horizontal)
+  const scanY=(frame*0.6)%H;
+  ctx.fillStyle='rgba(91,82,255,0.012)';
+  ctx.fillRect(0,scanY,W,2);
+
+  // vignette on right side
+  const vx=cx+R*0.3;
+  const vg=ctx.createRadialGradient(vx,cy,R*0.1,vx,cy,R*1.4);
+  vg.addColorStop(0,'rgba(3,3,10,0)');
+  vg.addColorStop(1,'rgba(3,3,10,0.7)');
+  ctx.fillStyle=vg;
+  ctx.fillRect(0,0,W,H);
+}
+
+draw();
+
+const ms=[18,21,19,23,20,17,22,20,24,19];
+let mi=0;
+const tv1=document.getElementById('tv1');
+setInterval(()=>{
+  mi=(mi+1)%ms.length;
+  if(tv1) tv1.innerHTML=ms[mi]+'<span class="gc-tick-u">ms</span>';
+},2800);
+</script>

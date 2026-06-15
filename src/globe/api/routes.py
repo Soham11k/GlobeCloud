@@ -87,8 +87,21 @@ def build_api_router(
     api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
     repl = APIRouter(prefix="/api/v1/replication", dependencies=[Depends(require_replication_secret)])
 
+    def _catalog_product_count() -> int:
+        sample_region = cluster.local_region_id if settings.is_regional else "us-east-1"
+        if cluster.is_local(sample_region):
+            return len(cluster.get(sample_region).list_products())
+        return len(cluster.local_db().list_products())
+
+    def _knowledge_doc_count() -> int:
+        if settings.is_regional:
+            return len(cluster.local_db().list_knowledge())
+        return sum(len(cluster.get(r).list_knowledge()) for r in cluster.regions)
+
     @api.get("/product")
     async def product_info() -> dict:
+        region = cluster.local_region_id
+        simulated = settings.deployment_mode == "local"
         return {
             "name": settings.product_name,
             "tagline": settings.product_tagline,
@@ -105,6 +118,32 @@ def build_api_router(
             "peers": list(cluster.peers.keys()) if settings.is_regional else [],
             "auth_required": settings.auth_enabled,
             "llm_mode": "openai" if settings.llm_enabled else "mock",
+            "is_simulated": simulated,
+            "simulation_note": (
+                "Three SQLite replicas on this host; latencies are estimated from geo distance."
+                if simulated
+                else None
+            ),
+            "catalog_products": _catalog_product_count(),
+            "knowledge_docs": _knowledge_doc_count(),
+        }
+
+    @api.get("/catalog")
+    async def catalog_overview(
+        region_id: str = Query("us-east-1"),
+    ) -> dict:
+        try:
+            products = await cluster.get_products(region_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        plans = [p for p in products if p.get("category") == "plans"]
+        addons = [p for p in products if p.get("category") == "addons"]
+        return {
+            "region": region_id,
+            "plans": plans,
+            "addons": addons,
+            "products_total": len(products),
+            "knowledge_docs": _knowledge_doc_count(),
         }
 
     @api.get("/health")

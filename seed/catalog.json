@@ -1,51 +1,120 @@
 {
   "products": [
     {
-      "id": "sku-001",
+      "id": "gc-starter",
       "sku": "GC-STARTER",
-      "name": "GlobeCloud Starter Plan",
+      "name": "Starter",
       "price": 49.0,
+      "stock": 999,
+      "category": "plans",
+      "description": "Three regional nodes, geo routing, replication every 30s, and grounded copilot for teams up to 10."
+    },
+    {
+      "id": "gc-pro",
+      "sku": "GC-PRO",
+      "name": "Pro",
+      "price": 199.0,
       "stock": 500,
       "category": "plans",
-      "description": "Three regional SQLite nodes, geo routing, and grounded copilot for small teams.",
-      "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=200&fit=crop"
+      "description": "Priority replication, HTTP health probes, metrics history, and OpenAI copilot with citation tracking."
     },
     {
-      "id": "sku-002",
-      "sku": "GC-PRO",
-      "name": "GlobeCloud Pro Plan",
-      "price": 199.0,
-      "stock": 120,
-      "category": "plans",
-      "description": "Priority replication, dedicated routing probes, and OpenAI-powered copilot.",
-      "image_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=200&fit=crop"
-    },
-    {
-      "id": "sku-003",
+      "id": "gc-enterprise",
       "sku": "GC-ENTERPRISE",
-      "name": "GlobeCloud Enterprise",
+      "name": "Enterprise",
       "price": 999.0,
-      "stock": 25,
+      "stock": 100,
       "category": "plans",
-      "description": "Global gateway, custom SLAs, audit logs, and multi-key API access.",
-      "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop"
+      "description": "Global gateway, custom SLAs, audit logs, multi-key API access, and dedicated onboarding."
+    },
+    {
+      "id": "gc-addon-region",
+      "sku": "GC-ADDON-REGION",
+      "name": "Extra region",
+      "price": 29.0,
+      "stock": 999,
+      "category": "addons",
+      "description": "Add a fourth regional SQLite node with full replication and routing integration."
+    },
+    {
+      "id": "gc-addon-gateway",
+      "sku": "GC-ADDON-GW",
+      "name": "Dedicated gateway",
+      "price": 99.0,
+      "stock": 200,
+      "category": "addons",
+      "description": "Single-tenant global gateway with custom domain and HA failover between regions."
+    },
+    {
+      "id": "gc-addon-support",
+      "sku": "GC-ADDON-SUPPORT",
+      "name": "Priority support",
+      "price": 149.0,
+      "stock": 300,
+      "category": "addons",
+      "description": "15-minute response SLA, Slack channel, and quarterly architecture reviews."
     }
   ],
   "knowledge": [
     {
-      "title": "Pricing overview",
+      "title": "Getting started",
       "region": "us-east-1",
-      "body": "GlobeCloud Starter includes 3 regions and 10GB storage. Pro adds dedicated replication and priority routing. Enterprise includes custom SLAs and dedicated support."
+      "body": "Create an API key in the console Settings panel. Open Overview and follow the getting started checklist — route a request, place an order, and ask the copilot. Replication syncs across us-east-1, eu-west-1, and ap-south-1."
     },
     {
-      "title": "Data residency",
+      "title": "API authentication",
+      "region": "us-east-1",
+      "body": "All /api/v1 endpoints except /health require the X-API-Key header when API_KEY is configured. Use API_KEYS for rotation. The gateway and regional backends share the same key in production deployments."
+    },
+    {
+      "title": "Replication model",
+      "region": "us-east-1",
+      "body": "GlobeCloud uses append-only replication logs per region. Product inserts, stock updates, orders, and knowledge docs replicate asynchronously. Conflict policy is last-write-wins on stock with a floor of zero."
+    },
+    {
+      "title": "Geo routing",
       "region": "eu-west-1",
-      "body": "EU customers can pin reads and writes to eu-west-1. Replication to other regions is asynchronous and configurable per tenant."
+      "body": "GET /api/v1/route accepts client_lat and client_lon. The router probes regional /health endpoints in production mode or estimates latency locally. Circuit breakers mark unhealthy regions after repeated failures."
+    },
+    {
+      "title": "Copilot grounding",
+      "region": "eu-west-1",
+      "body": "The agent retrieves knowledge snippets via TF-IDF before answering. Responses include citations with confidence scores. Set OPENAI_API_KEY for GPT-4o-mini; without it the system uses a local heuristic fallback."
     },
     {
       "title": "Support SLAs",
       "region": "ap-south-1",
-      "body": "Enterprise customers receive 15-minute response SLAs during business hours across all regions. Starter and Pro plans use community support with 24-hour response targets."
+      "body": "Starter: community support, 24-hour response target. Pro: email support, 8-hour response. Enterprise and Priority Support add-on: 15-minute response during business hours across all regions."
+    },
+    {
+      "title": "Billing and plans",
+      "region": "us-east-1",
+      "body": "Starter is $49/month for three regions. Pro is $199/month with metrics history and priority sync. Enterprise starts at $999/month with custom terms. Add-ons bill separately: extra region $29, dedicated gateway $99, priority support $149."
+    },
+    {
+      "title": "Security practices",
+      "region": "eu-west-1",
+      "body": "Use REPLICATION_SECRET between regional peers. Never commit API_KEY or OPENAI_API_KEY to git. Rate limiting defaults to 120 requests per minute per IP. Audit logs retain the last 2000 API requests."
+    },
+    {
+      "title": "Data residency",
+      "region": "eu-west-1",
+      "body": "EU customers can pin writes to eu-west-1. Reads may geo-route to the nearest healthy region. Replication to US and AP is asynchronous; configure sync intervals for compliance requirements."
+    },
+    {
+      "title": "Rate limits and quotas",
+      "region": "ap-south-1",
+      "body": "Starter: 120 API requests per minute, 10 concurrent copilot sessions. Pro: 600 rpm, 50 sessions. Enterprise: custom limits. Order quantity is capped at 100 units per request."
+    },
+    {
+      "title": "Changelog March 2026",
+      "region": "us-east-1",
+      "body": "Added metrics history sampling, SSE live stream, order history API, catalog search, and premium brand refresh. Replication UI now shows replication_log_entries correctly."
+    },
+    {
+      "title": "FAQ",
+      "region": "ap-south-1",
+      "body": "Q: What is GlobeCloud? A: A multi-region SQLite platform with geo routing, replication, and a RAG copilot. Q: Can I use my own catalog? A: Edit seed/catalog.json and run ./scripts/seed-production.sh."
     }
   ]
 }

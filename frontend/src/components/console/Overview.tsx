@@ -90,7 +90,7 @@ export function OverviewPanel({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={onDemo}><Play className="h-4 w-4" /> Run demo flow</Button>
+            <Button onClick={onDemo}><Play className="h-4 w-4" /> Guided tour</Button>
             <Button variant="secondary" onClick={onSync}><RefreshCw className="h-4 w-4" /> Sync now</Button>
             <Button variant="outline" asChild><Link to="/app/copilot"><Bot className="h-4 w-4" /> Open copilot</Link></Button>
           </div>
@@ -175,7 +175,9 @@ export function OverviewPanel({
 
       {!healthLoading && health && (
         <p className="text-xs text-muted-foreground">
-          {health.deployment_mode} · {health.llm_mode} LLM · replication {health.replication_running ? "active" : "idle"}
+          {health.deployment_mode}
+          {health.deployment_mode === "local" ? " · 3 SQLite replicas on this host" : ""}
+          {" · "}{health.llm_mode} LLM · replication {health.replication_running ? "active" : "idle"}
         </p>
       )}
     </motion.div>

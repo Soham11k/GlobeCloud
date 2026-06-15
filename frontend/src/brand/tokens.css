@@ -1,0 +1,14 @@
+:root {
+  --section-max: 72rem;
+  --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-elevated-dark: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --tier-starter: #2563eb;
+  --tier-pro: #0d9488;
+  --tier-enterprise: #18181b;
+  --tier-addon: #71717a;
+}
+
+.dark {
+  --shadow-elevated: var(--shadow-elevated-dark);
+}
