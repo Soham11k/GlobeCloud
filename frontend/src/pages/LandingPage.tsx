@@ -276,7 +276,7 @@ export function LandingPage() {
           </>
         )}
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button asChild><Link to="/app/inventory">View in Inventory</Link></Button>
+          <Button asChild><Link to="/app/catalog">View in Inventory</Link></Button>
           <Button variant="outline" asChild><a href="/api/docs">Read API docs</a></Button>
         </div>
       </section>

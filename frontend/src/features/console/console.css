@@ -1,0 +1,193 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+.console-root {
+  --gc-bg: #06060a;
+  --gc-surface: #0c0c12;
+  --gc-raised: #111118;
+  --gc-border: rgba(255, 255, 255, 0.07);
+  --gc-border-strong: rgba(255, 255, 255, 0.12);
+  --gc-text: #e8e6e1;
+  --gc-muted: rgba(255, 255, 255, 0.42);
+  --gc-dim: rgba(255, 255, 255, 0.22);
+  --gc-accent: #5b52ff;
+  --gc-accent-dim: rgba(91, 82, 255, 0.15);
+  --gc-ok: #2dd4a0;
+  --gc-warn: #f0a84a;
+  --gc-err: #f87171;
+  --gc-mono: "JetBrains Mono", ui-monospace, monospace;
+  --gc-sans: "Space Grotesk", system-ui, sans-serif;
+  --gc-rail: 52px;
+  font-family: var(--gc-sans);
+  background: var(--gc-bg);
+  color: var(--gc-text);
+  min-height: 100vh;
+}
+
+.console-rail {
+  width: var(--gc-rail);
+  background: var(--gc-surface);
+  border-right: 1px solid var(--gc-border);
+}
+
+.console-main {
+  background: var(--gc-bg);
+}
+
+.console-topbar {
+  border-bottom: 1px solid var(--gc-border);
+  background: var(--gc-surface);
+}
+
+.console-panel {
+  border: 1px solid var(--gc-border);
+  background: var(--gc-surface);
+}
+
+.console-mono {
+  font-family: var(--gc-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.console-table th {
+  font-family: var(--gc-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gc-dim);
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gc-border);
+}
+
+.console-table td {
+  font-family: var(--gc-mono);
+  font-size: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gc-border);
+}
+
+.console-table tr:last-child td {
+  border-bottom: none;
+}
+
+.console-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.console-kpi-val {
+  font-family: var(--gc-mono);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.console-nav-item {
+  color: var(--gc-dim);
+  transition: color 0.15s, background 0.15s;
+}
+
+.console-nav-item:hover {
+  color: var(--gc-muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.console-nav-item[data-active="true"] {
+  color: var(--gc-accent);
+  background: var(--gc-accent-dim);
+  box-shadow: inset 2px 0 0 var(--gc-accent);
+}
+
+.console-input {
+  font-family: var(--gc-mono);
+  font-size: 12px;
+  background: var(--gc-bg);
+  border: 1px solid var(--gc-border);
+  color: var(--gc-text);
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.console-input:focus {
+  outline: none;
+  border-color: rgba(91, 82, 255, 0.5);
+}
+
+.console-btn {
+  font-family: var(--gc-sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border: 1px solid var(--gc-border-strong);
+  background: var(--gc-raised);
+  color: var(--gc-text);
+  cursor: pointer;
+}
+
+.console-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.console-btn-primary {
+  background: var(--gc-accent);
+  border-color: var(--gc-accent);
+  color: #fff;
+}
+
+.console-btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.console-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.console-chip {
+  font-family: var(--gc-mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--gc-border);
+  color: var(--gc-muted);
+}
+
+.console-chip-ok {
+  border-color: rgba(45, 212, 160, 0.35);
+  color: var(--gc-ok);
+}
+
+.console-chip-warn {
+  border-color: rgba(240, 168, 74, 0.35);
+  color: var(--gc-warn);
+}
+
+.console-chip-err {
+  border-color: rgba(248, 113, 113, 0.35);
+  color: var(--gc-err);
+}
+
+.console-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.console-led-ok {
+  background: var(--gc-ok);
+  box-shadow: 0 0 8px rgba(45, 212, 160, 0.5);
+}
+
+.console-led-warn {
+  background: var(--gc-warn);
+}
+
+.console-led-err {
+  background: var(--gc-err);
+}
+
+.console-led-off {
+  background: var(--gc-dim);
+}

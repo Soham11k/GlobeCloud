@@ -53,6 +53,7 @@ export async function api<T>(
 export type ProductInfo = {
   name: string;
   tagline: string;
+  version?: string;
   deployment_mode: string;
   local_region?: string;
   regions: number;
@@ -62,6 +63,25 @@ export type ProductInfo = {
   simulation_note?: string | null;
   catalog_products?: number;
   knowledge_docs?: number;
+  features?: string[];
+  peers?: string[];
+  public_url?: string | null;
+};
+
+export type RegionInfo = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  base_latency_ms: number;
+  is_local: boolean;
+  peer_url?: string | null;
+};
+
+export type RegionsResponse = {
+  local_region: string;
+  deployment_mode: string;
+  regions: RegionInfo[];
 };
 
 export type CatalogInfo = {
@@ -86,16 +106,28 @@ export type RouterMetric = {
   healthy: boolean;
   latency_ms: number | null;
   circuit?: string;
+  error_rate?: number;
+  is_local?: boolean;
+  peer_url?: string | null;
 };
 
 export type MetricsInfo = {
+  deployment_mode?: string;
+  local_region?: string;
   router: RouterMetric[];
-  inference_cache?: { hit_rate?: number };
+  inference_cache?: {
+    hit_rate?: number;
+    cache_entries?: number;
+    cache_hits?: number;
+    cache_misses?: number;
+  };
 };
 
 export type RouteResult = {
   selected_region: string;
   selected_name: string;
+  is_local?: boolean;
+  peer_url?: string | null;
   probes: RouterMetric[];
 };
 
@@ -141,18 +173,52 @@ export type SyncStatus = {
   cycles: number;
   interval_s?: number;
   mode?: string;
+  local_region?: string;
+  last_entries_applied?: number;
+  peer_errors?: number;
   regions?: Record<
     string,
     {
+      local?: boolean;
+      peer_url?: string | null;
       stats?: {
         products?: number;
         orders?: number;
         replication_log_entries?: number;
         entries?: number;
       };
-      sync_lag?: { peer_region: string; behind_by: number }[];
+      sync_lag?: { peer_region: string; behind_by: number; last_applied_seq?: number; local_head_seq?: number }[];
     }
   >;
+};
+
+export type KnowledgeDoc = {
+  id: string;
+  title: string;
+  body: string;
+  region: string;
+  updated_at: string;
+};
+
+export type AuditEntry = {
+  ts: string;
+  method: string;
+  path: string;
+  status: number;
+  duration_ms: number;
+  client_ip?: string;
+};
+
+export type MetricsSummary = {
+  metric: string;
+  summary: {
+    count: number;
+    min?: number;
+    max?: number;
+    avg?: number;
+    p50?: number;
+    p95?: number;
+  };
 };
 
 export type AgentResponse = {
@@ -160,14 +226,23 @@ export type AgentResponse = {
   confidence: string;
   backend_region?: string;
   citations?: { title: string; region: string; score: number; body: string }[];
-  inference: { provider: string; latency_ms: number };
+  tool_trace?: { tool: string; input?: Record<string, unknown>; output?: unknown }[];
+  inference: { provider: string; model?: string; latency_ms: number };
 };
 
-export async function* streamAgentAsk(body: {
-  question: string;
-  client_lat: number;
-  client_lon: number;
-}): AsyncGenerator<string> {
+export type AgentStreamResult = {
+  answer: string;
+  meta?: AgentResponse;
+};
+
+export async function streamAgentAsk(
+  body: {
+    question: string;
+    client_lat: number;
+    client_lon: number;
+  },
+  onToken?: (full: string) => void
+): Promise<AgentStreamResult> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const key = getApiKey();
   if (key) headers["X-API-Key"] = key;
@@ -187,10 +262,12 @@ export async function* streamAgentAsk(body: {
   }
 
   const reader = response.body?.getReader();
-  if (!reader) return;
+  if (!reader) return { answer: "" };
 
   const decoder = new TextDecoder();
   let buffer = "";
+  let answer = "";
+  let meta: AgentResponse | undefined;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -199,16 +276,20 @@ export async function* streamAgentAsk(body: {
     const lines = buffer.split("\n");
     buffer = lines.pop() || "";
     for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        if (data === "[DONE]") return;
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.token) yield parsed.token;
-        } catch {
-          /* skip */
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6);
+      if (data === "[DONE]") return { answer, meta };
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.token) {
+          answer += parsed.token;
+          onToken?.(answer);
         }
+        if (parsed.done && parsed.meta) meta = parsed.meta as AgentResponse;
+      } catch {
+        /* skip */
       }
     }
   }
+  return { answer, meta };
 }

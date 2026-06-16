@@ -13,6 +13,10 @@ import {
   type Order,
   type ActivityItem,
   type MetricPoint,
+  type RegionsResponse,
+  type KnowledgeDoc,
+  type AuditEntry,
+  type MetricsSummary,
 } from "./api";
 import { pushMetric, sparklineData } from "./metricsBuffer";
 
@@ -21,6 +25,40 @@ export function useProduct() {
     queryKey: ["product"],
     queryFn: () => api<ProductInfo>("/product"),
     retry: 1,
+  });
+}
+
+export function useRegions() {
+  return useQuery({
+    queryKey: ["regions"],
+    queryFn: () => api<RegionsResponse>("/regions"),
+    staleTime: 60000,
+  });
+}
+
+export function useKnowledge(region: string) {
+  return useQuery({
+    queryKey: ["knowledge", region],
+    queryFn: () => api<{ region: string; documents: KnowledgeDoc[]; is_local: boolean }>(
+      `/regions/${region}/knowledge`
+    ),
+    enabled: !!region,
+  });
+}
+
+export function useAudit(limit = 50) {
+  return useQuery({
+    queryKey: ["audit", limit],
+    queryFn: () => api<{ entries: AuditEntry[] }>(`/audit?limit=${limit}`),
+    refetchInterval: 15000,
+  });
+}
+
+export function useMetricsSummary(metric = "latency_ms", sinceHours = 24) {
+  return useQuery({
+    queryKey: ["metrics-summary", metric, sinceHours],
+    queryFn: () => api<MetricsSummary>(`/metrics/summary?metric=${metric}&since_hours=${sinceHours}`),
+    refetchInterval: 30000,
   });
 }
 

@@ -50,29 +50,24 @@ export function CopilotPanel({
     setMessages((m) => [...m, { role: "user", content: question }]);
 
     try {
-      let streamed = "";
       setMessages((m) => [...m, { role: "agent", content: "", streaming: true }]);
-
-      try {
-        for await (const token of streamAgentAsk({
-          question,
-          client_lat: clientLat,
-          client_lon: clientLon,
-        })) {
-          streamed += token;
+      const { answer, meta } = await streamAgentAsk(
+        { question, client_lat: clientLat, client_lon: clientLon },
+        (full) => {
           setMessages((m) => {
             const copy = [...m];
-            copy[copy.length - 1] = { role: "agent", content: streamed, streaming: true };
+            copy[copy.length - 1] = { role: "agent", content: full, streaming: true };
             return copy;
           });
         }
-        markChecklist("asked");
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { ...copy[copy.length - 1], streaming: false };
-          return copy;
-        });
-      } catch {
+      );
+      markChecklist("asked");
+      setMessages((m) => {
+        const copy = m.filter((msg) => !msg.streaming);
+        return [...copy, { role: "agent", content: answer, meta }];
+      });
+    } catch {
+      try {
         const data = await api<AgentResponse>("/agent/ask", {
           method: "POST",
           body: JSON.stringify({
@@ -84,15 +79,12 @@ export function CopilotPanel({
         markChecklist("asked");
         setMessages((m) => {
           const copy = m.filter((msg) => !msg.streaming);
-          return [
-            ...copy,
-            { role: "agent", content: data.answer, meta: data },
-          ];
+          return [...copy, { role: "agent", content: data.answer, meta: data }];
         });
+      } catch (e) {
+        toast.error((e as Error).message);
+        setMessages((m) => m.filter((msg) => !msg.streaming));
       }
-    } catch (e) {
-      toast.error((e as Error).message);
-      setMessages((m) => m.filter((msg) => !msg.streaming));
     } finally {
       setLoading(false);
     }
