@@ -16,7 +16,7 @@
   --color-muted: #f4f4f5;
   --color-muted-foreground: #71717a;
   --color-border: #e4e4e7;
-  --color-accent: #2563eb;
+  --color-accent: #5b52ff;
   --color-accent-foreground: #ffffff;
   --color-success: #16a34a;
   --color-warning: #d97706;
@@ -38,7 +38,7 @@
   --color-muted: #27272a;
   --color-muted-foreground: #a1a1aa;
   --color-border: #27272a;
-  --color-accent: #3b82f6;
+  --color-accent: #7b75ff;
 }
 
 @layer base {

@@ -1,0 +1,142 @@
+services:
+  platform-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: globe
+      POSTGRES_PASSWORD: globe
+      POSTGRES_DB: globe_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - platform_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U globe -d globe_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  us-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: globe
+      POSTGRES_PASSWORD: globe
+      POSTGRES_DB: globe_us
+    ports:
+      - "5433:5432"
+    volumes:
+      - us_data:/var/lib/postgresql/data
+
+  eu-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: globe
+      POSTGRES_PASSWORD: globe
+      POSTGRES_DB: globe_eu
+    volumes:
+      - eu_data:/var/lib/postgresql/data
+
+  ap-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: globe
+      POSTGRES_PASSWORD: globe
+      POSTGRES_DB: globe_ap
+    volumes:
+      - ap_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  us-east-1:
+    build: .
+    ports:
+      - "8001:8000"
+    depends_on:
+      platform-db:
+        condition: service_healthy
+      us-db:
+        condition: service_started
+    environment:
+      DEPLOYMENT_MODE: regional
+      REGION_ID: us-east-1
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://globe:globe@platform-db:5432/globe_platform
+      REGIONAL_DATABASE_URL: postgresql+psycopg://globe:globe@us-db:5432/globe_us
+      PEER_URLS: "eu-west-1:http://eu-west-1:8000,ap-south-1:http://ap-south-1:8000"
+      REPLICATION_SECRET: dev-replication-secret
+      REDIS_URL: redis://redis:6379
+      PUBLIC_URL: http://localhost:8001
+    networks:
+      - globecloud
+
+  eu-west-1:
+    build: .
+    ports:
+      - "8002:8000"
+    depends_on:
+      - platform-db
+      - eu-db
+    environment:
+      DEPLOYMENT_MODE: regional
+      REGION_ID: eu-west-1
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://globe:globe@platform-db:5432/globe_platform
+      REGIONAL_DATABASE_URL: postgresql+psycopg://globe:globe@eu-db:5432/globe_eu
+      PEER_URLS: "us-east-1:http://us-east-1:8000,ap-south-1:http://ap-south-1:8000"
+      REPLICATION_SECRET: dev-replication-secret
+      REDIS_URL: redis://redis:6379
+      PUBLIC_URL: http://localhost:8002
+    networks:
+      - globecloud
+
+  ap-south-1:
+    build: .
+    ports:
+      - "8003:8000"
+    depends_on:
+      - platform-db
+      - ap-db
+    environment:
+      DEPLOYMENT_MODE: regional
+      REGION_ID: ap-south-1
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://globe:globe@platform-db:5432/globe_platform
+      REGIONAL_DATABASE_URL: postgresql+psycopg://globe:globe@ap-db:5432/globe_ap
+      PEER_URLS: "us-east-1:http://us-east-1:8000,eu-west-1:http://eu-west-1:8000"
+      REPLICATION_SECRET: dev-replication-secret
+      REDIS_URL: redis://redis:6379
+      PUBLIC_URL: http://localhost:8003
+    networks:
+      - globecloud
+
+  gateway:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      platform-db:
+        condition: service_healthy
+      - us-east-1
+      - eu-west-1
+      - ap-south-1
+    environment:
+      DEPLOYMENT_MODE: gateway
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://globe:globe@platform-db:5432/globe_platform
+      GATEWAY_PEERS: "us-east-1:http://us-east-1:8000,eu-west-1:http://eu-west-1:8000,ap-south-1:http://ap-south-1:8000"
+      REDIS_URL: redis://redis:6379
+      REPLICATION_SECRET: dev-replication-secret
+      OAUTH_REDIRECT_BASE_URL: http://localhost:8000
+    networks:
+      - globecloud
+
+networks:
+  globecloud:
+
+volumes:
+  platform_data:
+  us_data:
+  eu_data:
+  ap_data:

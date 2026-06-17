@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -6,16 +8,23 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 
+from starlette.middleware.sessions import SessionMiddleware
+
 from globe.ai.agent import DatabaseAgent
 from globe.ai.rag import InferenceClient, RAGIndex
+from globe.api.auth_routes import build_auth_router
+from globe.api.billing_routes import build_billing_router
+from globe.api.settings_routes import build_settings_router
 from globe.api.gateway_routes import build_gateway_peers, build_gateway_router
 from globe.api.middleware import LoggingMiddleware, RateLimitMiddleware
 from globe.api.routes import build_api_router
 from globe.config import get_settings
-from globe.database.models import DatabaseCluster
+from globe.db import PlatformStore, PostgresCluster, init_db
 from globe.database.sync import ReplicationEngine
 from globe.gateway.proxy import GatewayProxy
+from globe.observability.metrics import setup_prometheus
 from globe.observability.sampler import MetricsSampler, observability_path
+from globe.observability.sentry import init_sentry
 from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
 
@@ -51,6 +60,7 @@ def _mount_static(app: FastAPI) -> None:
         app.mount("/assets", NoCacheStaticFiles(directory=assets_dir), name="assets")
 
     if (DIST_DIR / "favicon.svg").is_file():
+
         @app.get("/favicon.svg")
         async def favicon() -> FileResponse:
             return FileResponse(DIST_DIR / "favicon.svg")
@@ -61,6 +71,15 @@ def _mount_static(app: FastAPI) -> None:
 
     @app.get("/status")
     async def status_page() -> FileResponse:
+        return FileResponse(_spa_index(), headers=_HTML_HEADERS)
+
+    @app.get("/login")
+    @app.get("/signup")
+    @app.get("/auth/callback")
+    @app.get("/welcome")
+    @app.get("/verify-email")
+    @app.get("/reset-password")
+    async def auth_pages() -> FileResponse:
         return FileResponse(_spa_index(), headers=_HTML_HEADERS)
 
     @app.get("/app")
@@ -76,8 +95,27 @@ def _mount_static(app: FastAPI) -> None:
         return FileResponse(_spa_index(), headers=_HTML_HEADERS)
 
 
+def _init_auth(app: FastAPI) -> None:
+    app.state.auth_store = PlatformStore()
+    app.include_router(build_auth_router())
+    app.include_router(build_billing_router())
+    app.include_router(build_settings_router())
+
+
+def _bootstrap_databases(app: FastAPI) -> None:
+    init_db()
+    store = getattr(app.state, "auth_store", None)
+    if store is not None:
+        store.bootstrap()
+    cluster = getattr(app.state, "cluster", None)
+    if cluster is not None:
+        for db in cluster.regions.values():
+            db.bootstrap()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
+    init_sentry()
 
     app = FastAPI(
         title=settings.product_name,
@@ -88,15 +126,23 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
+    cors_origins = settings.cors_origin_list
+    if settings.is_production and "*" in cors_origins:
+        cors_origins = ["https://globecloud.io"]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origin_list,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(SessionMiddleware, secret_key=settings.jwt_secret_key)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(RateLimitMiddleware)
+
+    _init_auth(app)
+    setup_prometheus(app)
 
     if settings.is_gateway:
         peers = build_gateway_peers()
@@ -108,11 +154,16 @@ def create_app() -> FastAPI:
         )
         api = build_gateway_router(proxy, router)
         app.include_router(api)
+
+        @app.on_event("startup")
+        async def gateway_startup() -> None:
+            _bootstrap_databases(app)
+
         _mount_static(app)
         return app
 
     data_dir = Path(settings.data_dir)
-    cluster = DatabaseCluster(
+    cluster = PostgresCluster(
         data_dir,
         deployment_mode=settings.deployment_mode,
         region_id=settings.region_id,
@@ -122,20 +173,20 @@ def create_app() -> FastAPI:
         seed_demo_data=settings.seed_demo_data,
         catalog_seed_file=settings.catalog_seed_file,
     )
+    app.state.cluster = cluster
     router = GeoRouter(
         deployment_mode=settings.deployment_mode,
         local_region_id=settings.region_id,
         peer_clients=cluster.peers,
     )
     replicator = ReplicationEngine(cluster)
-    rag = RAGIndex()
+    rag = RAGIndex(cluster.local_db() if cluster.regions else None)
     observ = ObservabilityStore(observability_path(data_dir))
     app.state.observ = observ
 
     def _rebuild_rag() -> None:
-        if settings.is_regional:
-            return
-        rag.rebuild(cluster.all_knowledge_sync())
+        if settings.is_regional and cluster.regions:
+            asyncio_run_rag_rebuild(cluster, rag)
 
     replicator.on_sync = _rebuild_rag
     llm = InferenceClient()
@@ -148,13 +199,14 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def startup() -> None:
-        if settings.is_regional:
-            rag.rebuild(await cluster.all_knowledge())
-        else:
-            rag.rebuild(cluster.all_knowledge_sync())
+        _bootstrap_databases(app)
+        if cluster.regions:
+            if settings.is_regional:
+                await rag.rebuild_async(await cluster.all_knowledge())
+            else:
+                await rag.rebuild_async(cluster.all_knowledge_sync())
         await replicator.start()
         await sampler.start()
-        # Populate router health snapshot so landing metrics are live on first visit
         await router.route(40.71, -74.01)
 
     @app.on_event("shutdown")
@@ -164,6 +216,19 @@ def create_app() -> FastAPI:
 
     _mount_static(app)
     return app
+
+
+def asyncio_run_rag_rebuild(cluster, rag) -> None:
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(rag.rebuild_async(cluster.all_knowledge()))
+        else:
+            loop.run_until_complete(rag.rebuild_async(cluster.all_knowledge()))
+    except RuntimeError:
+        pass
 
 
 app = create_app()

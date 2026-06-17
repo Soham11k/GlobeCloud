@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from globe.database.models import DatabaseCluster
 from globe.database.sync import ReplicationEngine
 from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
@@ -13,7 +12,7 @@ class MetricsSampler:
     def __init__(
         self,
         store: ObservabilityStore,
-        cluster: DatabaseCluster,
+        cluster: object,
         router: GeoRouter,
         replicator: ReplicationEngine,
         llm,

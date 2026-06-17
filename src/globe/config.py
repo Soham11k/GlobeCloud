@@ -33,8 +33,29 @@ class Settings(BaseSettings):
     port: int = 8000
     data_dir: str = "data"
 
-    # Deployment: local | regional | gateway
-    deployment_mode: str = "local"
+    # PostgreSQL data plane
+    database_url: str = "postgresql+psycopg://globe:globe@localhost:5432/globe_platform"
+    regional_database_url: str = ""
+    environment: str = "development"  # development | staging | production
+
+    # Redis (rate limits, sessions)
+    redis_url: str = ""
+
+    # Stripe billing
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_starter: str = ""
+    stripe_price_pro: str = ""
+
+    # Email (Resend)
+    resend_api_key: str = ""
+    email_from: str = "GlobeCloud <noreply@globecloud.io>"
+
+    # Observability
+    sentry_dsn: str = ""
+
+    # Deployment: regional | gateway (local SQLite simulation removed)
+    deployment_mode: str = "regional"
     region_id: str = "us-east-1"
     peer_urls: str = ""
     gateway_peers: str = ""
@@ -45,17 +66,93 @@ class Settings(BaseSettings):
     replication_secret: str = ""
     cors_origins: str = "*"
 
+    # User authentication (JWT + OAuth)
+    auth_required: bool = True
+    jwt_secret: str = ""
+    jwt_access_minutes: int = 15
+    jwt_refresh_days: int = 30
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    oauth_redirect_base_url: str = "http://localhost:8000"
+
     # Catalog seeding: SEED_DEMO_DATA=0 loads seed/catalog.json only (no parody SKUs)
     seed_demo_data: bool = False
     catalog_seed_file: str = "seed/catalog.json"
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() == "production"
+
+    @property
+    def is_development(self) -> bool:
+        return self.environment.strip().lower() == "development"
+
+    @property
+    def regional_db_url(self) -> str:
+        return self.regional_database_url.strip() or self.database_url
+
+    @property
+    def uses_sqlite(self) -> bool:
+        return self.database_url.startswith("sqlite") or self.regional_db_url.startswith("sqlite")
+
+    @property
+    def jwt_secret_key(self) -> str:
+        if self.jwt_secret.strip():
+            return self.jwt_secret.strip()
+        if self.is_production:
+            raise RuntimeError("JWT_SECRET is required in production")
+        return "globecloud-dev-jwt-secret-change-in-production"
+
+    @property
+    def stripe_enabled(self) -> bool:
+        return bool(self.stripe_secret_key.strip())
+
+    @property
+    def redis_enabled(self) -> bool:
+        return bool(self.redis_url.strip())
+
+    @property
+    def sentry_enabled(self) -> bool:
+        return bool(self.sentry_dsn.strip())
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.resend_api_key.strip())
 
     @property
     def llm_enabled(self) -> bool:
         return bool(self.openai_api_key.strip())
 
     @property
-    def auth_enabled(self) -> bool:
+    def llm_required(self) -> bool:
+        return self.is_production and self.llm_enabled
+
+    @property
+    def api_auth_enabled(self) -> bool:
         return bool(self.api_key.strip() or self.api_keys.strip())
+
+    @property
+    def auth_enabled(self) -> bool:
+        return self.user_auth_required or self.api_auth_enabled
+
+    @property
+    def user_auth_required(self) -> bool:
+        return self.auth_required
+
+    @property
+    def oauth_providers(self) -> list:
+        providers = []
+        if self.google_client_id.strip() and self.google_client_secret.strip():
+            providers.append("google")
+        if self.github_client_id.strip() and self.github_client_secret.strip():
+            providers.append("github")
+        return providers
+
+    @property
+    def guest_read_enabled(self) -> bool:
+        return not self.is_production and self.user_auth_required
 
     @property
     def valid_api_keys(self) -> set:

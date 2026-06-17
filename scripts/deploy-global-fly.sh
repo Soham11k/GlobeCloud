@@ -29,13 +29,12 @@ GATEWAY_URL="https://${GATEWAY_APP}.fly.dev"
 
 API_KEY="${API_KEY:-$(openssl rand -hex 32)}"
 REPLICATION_SECRET="${REPLICATION_SECRET:-$(openssl rand -hex 32)}"
+JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
 CORS_ORIGINS="${CORS_ORIGINS:-${GATEWAY_URL}}"
 
 echo "==> GlobeCloud Global Deploy"
-echo "    Gateway: $GATEWAY_URL"
-echo "    US:      $US_URL"
-echo "    EU:      $EU_URL"
-echo "    AP:      $AP_URL"
+echo "    Provision Fly Postgres per app and set DATABASE_URL / REGIONAL_DATABASE_URL secrets"
+echo "    Run: flyctl postgres create && flyctl secrets set DATABASE_URL=... -a \$app"
 echo ""
 
 ensure_app() {
@@ -78,6 +77,7 @@ deploy_regional() {
     "PUBLIC_URL=${public_url}" \
     "DEPLOYMENT_MODE=regional" \
     "REGION_ID=${region_id}" \
+    "ENVIRONMENT=production" \
     -a "$app"
 
   flyctl deploy -a "$app" --ha=false
@@ -96,7 +96,23 @@ deploy_gateway() {
     "GATEWAY_PEERS=${gateway_peers}" \
     "PUBLIC_URL=${GATEWAY_URL}" \
     "DEPLOYMENT_MODE=gateway" \
+    "JWT_SECRET=${JWT_SECRET}" \
+    "AUTH_REQUIRED=true" \
+    "OAUTH_REDIRECT_BASE_URL=${GATEWAY_URL}" \
     -a "$GATEWAY_APP"
+
+  if [[ -n "${GOOGLE_CLIENT_ID:-}" && -n "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+    flyctl secrets set \
+      "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" \
+      "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
+      -a "$GATEWAY_APP"
+  fi
+  if [[ -n "${GITHUB_CLIENT_ID:-}" && -n "${GITHUB_CLIENT_SECRET:-}" ]]; then
+    flyctl secrets set \
+      "GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}" \
+      "GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}" \
+      -a "$GATEWAY_APP"
+  fi
 
   cp deploy/fly/gateway.toml fly.toml
   flyctl deploy -a "$GATEWAY_APP" --ha=false
@@ -130,7 +146,9 @@ cat > .env.deploy <<EOF
 # GlobeCloud deploy — $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 API_KEY=${API_KEY}
 REPLICATION_SECRET=${REPLICATION_SECRET}
+JWT_SECRET=${JWT_SECRET}
 GATEWAY_URL=${GATEWAY_URL}
+OAUTH_REDIRECT_BASE_URL=${GATEWAY_URL}
 EOF
 echo " Saved credentials to .env.deploy"
 echo ""

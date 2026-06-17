@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/brand/Logo";
 import { GlobeMap } from "@/components/GlobeMap";
-import { useHealth, useMetrics, useProduct, useMetricsHistory } from "@/lib/hooks";
+import { useHealth, useMetrics, useProduct, useMetricsHistory, useRegions, useGlobalStatus } from "@/lib/hooks";
 
 function UptimeBar({ samples }: { samples: { value: number; ts: string }[] }) {
   const slots = 90;
@@ -50,6 +50,9 @@ export function StatusPage() {
   const { data: health, isLoading: hLoad } = useHealth();
   const { data: metrics, isLoading: mLoad } = useMetrics();
   const { data: product } = useProduct();
+  const { data: regions } = useRegions();
+  const isGateway = product?.deployment_mode === "gateway";
+  const { data: fleet } = useGlobalStatus(!!isGateway);
   const { data: history } = useMetricsHistory("latency_ms", 24 * 90);
 
   const allHealthy = metrics?.router.every((r) => r.healthy) ?? false;
@@ -94,8 +97,16 @@ export function StatusPage() {
             </div>
             <div className="flex justify-between py-2 border-b border-border">
               <span>Deployment</span>
-              <span className="text-muted-foreground">{product?.deployment_mode ?? "—"}</span>
+              <span className="text-muted-foreground">
+                {isGateway ? "gateway (live fleet)" : product?.is_simulated ? "local fleet" : product?.deployment_mode ?? "—"}
+              </span>
             </div>
+            {isGateway && fleet && (
+              <div className="flex justify-between py-2 border-b border-border">
+                <span>Healthy regions</span>
+                <span className="text-muted-foreground">{fleet.healthy_regions}/{fleet.total_regions}</span>
+              </div>
+            )}
             <div className="flex justify-between py-2">
               <span>Replication</span>
               <Badge variant={health?.replication_running ? "success" : "default"}>
@@ -106,7 +117,15 @@ export function StatusPage() {
         </Card>
 
         <Card className="overflow-hidden p-0">
-          <GlobeMap probes={metrics?.router.map((r) => ({ region_id: r.region_id, healthy: r.healthy })) ?? []} className="w-full h-40" />
+          <GlobeMap
+            regions={regions?.regions}
+            probes={
+              isGateway && fleet
+                ? fleet.regions.map((r) => ({ region_id: r.region_id, healthy: r.healthy }))
+                : metrics?.router.map((r) => ({ region_id: r.region_id, healthy: r.healthy })) ?? []
+            }
+            className="w-full h-48"
+          />
         </Card>
 
         <Card>

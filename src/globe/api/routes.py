@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 from globe.ai.agent import DatabaseAgent
 from globe.ai.rag import InferenceClient, RAGIndex
-from globe.api.auth import require_api_key, require_replication_secret
+from globe.api.auth import require_api_access, require_replication_secret
 from globe.config import get_settings
-from globe.database.models import REGIONS, DatabaseCluster
+from globe.database.models import REGIONS
 from globe.database.sync import ReplicationEngine
 from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
@@ -67,15 +67,15 @@ def _agent_response(result) -> dict:
     }
 
 
-async def _rebuild_rag_async(cluster: DatabaseCluster, rag: RAGIndex, settings) -> None:
+async def _rebuild_rag_async(cluster, rag: RAGIndex, settings) -> None:
     if settings.is_regional:
-        rag.rebuild(await cluster.all_knowledge())
+        await rag.rebuild_async(await cluster.all_knowledge())
     else:
-        rag.rebuild(cluster.all_knowledge_sync())
+        await rag.rebuild_async(cluster.all_knowledge_sync())
 
 
 def build_api_router(
-    cluster: DatabaseCluster,
+    cluster,
     router: GeoRouter,
     replicator: ReplicationEngine,
     rag: RAGIndex,
@@ -84,7 +84,7 @@ def build_api_router(
     observ: Optional[ObservabilityStore] = None,
 ) -> APIRouter:
     settings = get_settings()
-    api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
+    api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_access)])
     repl = APIRouter(prefix="/api/v1/replication", dependencies=[Depends(require_replication_secret)])
 
     def _catalog_product_count() -> int:
@@ -100,30 +100,29 @@ def build_api_router(
 
     @api.get("/product")
     async def product_info() -> dict:
-        region = cluster.local_region_id
-        simulated = settings.deployment_mode == "local"
         return {
             "name": settings.product_name,
             "tagline": settings.product_tagline,
             "version": "1.0.0",
             "deployment_mode": settings.deployment_mode,
+            "environment": settings.environment,
             "local_region": cluster.local_region_id,
             "public_url": settings.public_url or None,
             "features": [
                 "geo_routing",
                 "multi_region_replication",
                 "rag_agent",
+                "org_rbac",
+                "stripe_billing",
             ],
             "regions": len(cluster.region_ids()),
             "peers": list(cluster.peers.keys()) if settings.is_regional else [],
             "auth_required": settings.auth_enabled,
-            "llm_mode": "openai" if settings.llm_enabled else "mock",
-            "is_simulated": simulated,
-            "simulation_note": (
-                "Three SQLite replicas on this host; latencies are estimated from geo distance."
-                if simulated
-                else None
-            ),
+            "user_auth_required": settings.user_auth_required,
+            "guest_read_enabled": settings.guest_read_enabled,
+            "oauth_providers": settings.oauth_providers,
+            "llm_mode": "openai" if settings.llm_enabled else ("required" if settings.is_production else "dev"),
+            "database": "postgresql",
             "catalog_products": _catalog_product_count(),
             "knowledge_docs": _knowledge_doc_count(),
         }
@@ -263,9 +262,9 @@ def build_api_router(
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         if settings.is_regional:
-            rag.rebuild(await cluster.all_knowledge())
+            await rag.rebuild_async(await cluster.all_knowledge())
         else:
-            rag.rebuild(cluster.all_knowledge_sync())
+            await rag.rebuild_async(cluster.all_knowledge_sync())
         return doc
 
     @api.post("/regions/{region_id}/products")
@@ -320,7 +319,7 @@ def build_api_router(
     async def search_knowledge(
         q: str = Query(min_length=2), top_k: int = Query(3, ge=1, le=10)
     ) -> dict:
-        chunks = rag.search(q, top_k=top_k)
+        chunks = await rag.search(q, top_k=top_k)
         return {
             "query": q,
             "results": [
@@ -355,21 +354,25 @@ def build_api_router(
 
     @api.post("/agent/ask/stream")
     async def agent_ask_stream(body: AgentRequest) -> StreamingResponse:
-        result = await agent.ask(
-            body.question,
-            client_lat=body.client_lat,
-            client_lon=body.client_lon,
-            preferred_region=body.preferred_region,
+        region, _health = await router.route(
+            body.client_lat, body.client_lon, body.preferred_region
+        )
+        chunks = await rag.search(body.question, top_k=3, region=region.id)
+        system = (
+            "You are a cloud infrastructure assistant. "
+            "Answer ONLY using the provided context. "
+            "If evidence is insufficient, say you are unsure."
+        )
+        user = (
+            f"Question: {body.question}\n\n"
+            f"Routed region: {region.name} ({region.id})\n\n"
+            f"Retrieved knowledge:\n{rag.as_context(chunks)}"
         )
 
         async def generate():
-            text = result.answer
-            chunk_size = 12
-            for i in range(0, len(text), chunk_size):
-                token = text[i : i + chunk_size]
+            async for token in llm.stream(system, user):
                 yield f"data: {json.dumps({'token': token})}\n\n"
-                await asyncio.sleep(0.025)
-            yield f"data: {json.dumps({'done': True, 'meta': _agent_response(result)})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
             yield "data: [DONE]\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")

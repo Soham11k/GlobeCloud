@@ -1,6 +1,15 @@
 const API_BASE = "/api/v1";
 
+import { toast } from "sonner";
 import { API_KEY_STORAGE } from "./utils";
+import { getAccessToken, refreshSession, setAccessToken } from "./auth";
+
+const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function redirectToLogin() {
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = `/login?next=${next}`;
+}
 
 export function getApiKey(): string {
   return localStorage.getItem(API_KEY_STORAGE) || "";
@@ -28,20 +37,36 @@ export async function api<T>(
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
+  const token = getAccessToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const key = getApiKey();
   if (key) headers["X-API-Key"] = key;
 
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "include" });
 
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}));
     const message =
       typeof detail.detail === "string" ? detail.detail : `Request failed (${response.status})`;
 
+    if (response.status === 401 && token && !retried) {
+      const refreshed = await refreshSession();
+      if (refreshed) return api(path, options, true);
+      setAccessToken(null);
+    }
+
     if (response.status === 401 && key) {
       setApiKey("");
       if (!retried) return api(path, options, true);
       throw new ApiError(`${message} — API key cleared.`, 401);
+    }
+    if (response.status === 401) {
+      const method = (options.method || "GET").toUpperCase();
+      if (MUTATING.has(method) && typeof window !== "undefined") {
+        toast.error("Sign in required for this action");
+        redirectToLogin();
+      }
+      throw new ApiError(message, 401);
     }
     throw new ApiError(message, response.status);
   }
@@ -58,6 +83,9 @@ export type ProductInfo = {
   local_region?: string;
   regions: number;
   auth_required: boolean;
+  user_auth_required?: boolean;
+  guest_read_enabled?: boolean;
+  oauth_providers?: string[];
   llm_mode: string;
   is_simulated?: boolean;
   simulation_note?: string | null;
@@ -244,12 +272,15 @@ export async function streamAgentAsk(
   onToken?: (full: string) => void
 ): Promise<AgentStreamResult> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getAccessToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const key = getApiKey();
   if (key) headers["X-API-Key"] = key;
 
   const response = await fetch(`${API_BASE}/agent/ask/stream`, {
     method: "POST",
     headers,
+    credentials: "include",
     body: JSON.stringify(body),
   });
 

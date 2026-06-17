@@ -1,22 +1,45 @@
+import { useMemo, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { geoNaturalEarth1 } from "d3-geo";
+import { geoNaturalEarth1, geoPath, geoGraticule10 } from "d3-geo";
+import { feature } from "topojson-client";
+import type { Topology } from "topojson-specification";
+import world from "world-atlas/countries-110m.json";
+import type { RegionInfo } from "@/lib/api";
+import { REGION_LABELS } from "@/lib/utils";
 
-const REGIONS = [
+const projection = geoNaturalEarth1().scale(160).translate([500, 250]);
+const pathGen = geoPath(projection);
+const graticule = geoGraticule10();
+
+const landFeature = feature(
+  world as unknown as Topology,
+  (world as unknown as Topology).objects.countries
+);
+
+type MapRegion = {
+  id: string;
+  lat: number;
+  lon: number;
+  label: string;
+  latency?: number;
+};
+
+const FALLBACK_REGIONS: MapRegion[] = [
   { id: "us-east-1", lat: 37.43, lon: -78.66, label: "US East" },
   { id: "eu-west-1", lat: 53.35, lon: -6.26, label: "EU West" },
   { id: "ap-south-1", lat: 19.08, lon: 72.88, label: "AP South" },
 ];
 
-const projection = geoNaturalEarth1().scale(160).translate([500, 250]);
-const landPath =
-  "M 120,180 Q 200,120 280,200 T 480,180 Q 560,140 640,200 T 820,280 Q 700,360 520,340 T 280,320 Q 180,280 120,180 Z";
+type Probe = { region_id: string; healthy: boolean; latency_ms?: number | null };
 
 type Props = {
   selected?: string;
-  probes?: { region_id: string; healthy: boolean }[];
+  probes?: Probe[];
   client?: { lat: number; lon: number };
   showArc?: boolean;
   className?: string;
+  regions?: RegionInfo[];
+  interactive?: boolean;
 };
 
 function project(lat: number, lon: number) {
@@ -30,35 +53,137 @@ function arcPath(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
 }
 
-export function GlobeMap({ selected, probes = [], client, showArc, className }: Props) {
+function toMapRegions(regions?: RegionInfo[], probes?: Probe[]): MapRegion[] {
+  const probeMap = Object.fromEntries((probes ?? []).map((p) => [p.region_id, p]));
+  if (!regions?.length) {
+    return FALLBACK_REGIONS.map((r) => ({
+      ...r,
+      latency: probeMap[r.id]?.latency_ms ?? undefined,
+    }));
+  }
+  return regions.map((r) => ({
+    id: r.id,
+    lat: r.latitude,
+    lon: r.longitude,
+    label: REGION_LABELS[r.id] ?? r.name ?? r.id,
+    latency: probeMap[r.id]?.latency_ms ?? undefined,
+  }));
+}
+
+export function GlobeMap({
+  selected,
+  probes = [],
+  client,
+  showArc,
+  className,
+  regions,
+  interactive = false,
+}: Props) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [cursorClient, setCursorClient] = useState<{ lat: number; lon: number } | null>(null);
+
+  const mapRegions = useMemo(() => toMapRegions(regions, probes), [regions, probes]);
   const probeMap = Object.fromEntries(probes.map((p) => [p.region_id, p]));
-  const clientPt = client ? project(client.lat, client.lon) : null;
-  const selectedRegion = REGIONS.find((r) => r.id === selected);
+  const effectiveClient = interactive && cursorClient ? cursorClient : client;
+  const clientPt = effectiveClient ? project(effectiveClient.lat, effectiveClient.lon) : null;
+  const selectedRegion = mapRegions.find((r) => r.id === selected);
   const selectedPt = selectedRegion ? project(selectedRegion.lat, selectedRegion.lon) : null;
+  const hoveredRegion = mapRegions.find((r) => r.id === hovered);
+
+  const landPaths = useMemo(() => {
+    if (!landFeature) return null;
+    if ("features" in landFeature) {
+      return landFeature.features.map((f, i) => (
+        <path
+          key={i}
+          d={pathGen(f) ?? ""}
+          fill="#1e293b"
+          opacity={0.75}
+          stroke="#5b52ff"
+          strokeWidth={0.35}
+          strokeOpacity={0.25}
+          filter="url(#coastGlow)"
+        />
+      ));
+    }
+    return (
+      <path
+        d={pathGen(landFeature) ?? ""}
+        fill="#1e293b"
+        opacity={0.75}
+        stroke="#5b52ff"
+        strokeWidth={0.35}
+        filter="url(#coastGlow)"
+      />
+    );
+  }, []);
+
+  const onMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (!interactive || !svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 1000;
+      const y = ((e.clientY - rect.top) / rect.height) * 500;
+      const inv = projection.invert?.([x, y]);
+      if (inv) setCursorClient({ lat: inv[1], lon: inv[0] });
+    },
+    [interactive]
+  );
 
   return (
-    <svg viewBox="0 0 1000 500" className={className} aria-label="World map">
+    <svg
+      ref={svgRef}
+      viewBox="0 0 1000 500"
+      className={className}
+      aria-label="World map"
+      onMouseMove={interactive ? onMouseMove : undefined}
+      onMouseLeave={interactive ? () => setCursorClient(null) : undefined}
+    >
       <defs>
         <linearGradient id="oceanGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#0f172a" />
-          <stop offset="100%" stopColor="#1e293b" />
+          <stop offset="0%" stopColor="#03030a" />
+          <stop offset="100%" stopColor="#0f172a" />
         </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="blur" />
+        <radialGradient id="oceanVignette" cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stopColor="transparent" />
+          <stop offset="100%" stopColor="#03030a" stopOpacity={0.65} />
+        </radialGradient>
+        <filter id="coastGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="probeGlow">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
+
       <rect width="1000" height="500" fill="url(#oceanGrad)" rx="8" />
-      <path d={landPath} fill="#334155" opacity="0.55" stroke="#475569" strokeWidth="1" />
+      <rect width="1000" height="500" fill="url(#oceanVignette)" rx="8" pointerEvents="none" />
+
+      <path
+        d={pathGen(graticule) ?? ""}
+        fill="none"
+        stroke="#5b52ff"
+        strokeWidth={0.25}
+        opacity={0.12}
+        pointerEvents="none"
+      />
+
+      <g>{landPaths}</g>
 
       {showArc && clientPt && selectedPt && (
         <motion.path
           d={arcPath(clientPt.x, clientPt.y, selectedPt.x, selectedPt.y)}
           fill="none"
-          stroke="#3b82f6"
+          stroke="#5b52ff"
           strokeWidth="2"
           strokeDasharray="6 4"
           initial={{ pathLength: 0, opacity: 0 }}
@@ -67,19 +192,39 @@ export function GlobeMap({ selected, probes = [], client, showArc, className }: 
         />
       )}
 
-      {REGIONS.map((r) => {
+      {mapRegions.map((r) => {
         const pt = project(r.lat, r.lon);
-        const healthy = probeMap[r.id]?.healthy !== false;
+        const probe = probeMap[r.id];
+        const healthy = probe?.healthy !== false;
         const isSelected = selected === r.id;
+        const isHovered = hovered === r.id;
         return (
-          <g key={r.id}>
+          <g
+            key={r.id}
+            onMouseEnter={() => setHovered(r.id)}
+            onMouseLeave={() => setHovered(null)}
+            style={{ cursor: "pointer" }}
+          >
+            {healthy && (
+              <motion.circle
+                cx={pt.x}
+                cy={pt.y}
+                r={14}
+                fill="none"
+                stroke="#5b52ff"
+                strokeWidth="1"
+                initial={{ opacity: 0.5, r: 8 }}
+                animate={{ opacity: 0, r: 22 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+              />
+            )}
             {isSelected && (
               <motion.circle
                 cx={pt.x}
                 cy={pt.y}
                 r={20}
                 fill="none"
-                stroke="#3b82f6"
+                stroke="#5b52ff"
                 strokeWidth="2"
                 initial={{ opacity: 0.8, r: 12 }}
                 animate={{ opacity: 0, r: 28 }}
@@ -89,11 +234,11 @@ export function GlobeMap({ selected, probes = [], client, showArc, className }: 
             <circle
               cx={pt.x}
               cy={pt.y}
-              r={isSelected ? 9 : 7}
-              fill={healthy ? (isSelected ? "#3b82f6" : "#22c55e") : "#ef4444"}
+              r={isSelected || isHovered ? 9 : 7}
+              fill={healthy ? (isSelected ? "#5b52ff" : "#2dd4a0") : "#ef4444"}
               stroke="#fff"
               strokeWidth="1.5"
-              filter={isSelected ? "url(#glow)" : undefined}
+              filter={isSelected || isHovered ? "url(#probeGlow)" : undefined}
             />
             <text x={pt.x} y={pt.y + 20} textAnchor="middle" fill="#94a3b8" fontSize="10">
               {r.label}
@@ -106,10 +251,37 @@ export function GlobeMap({ selected, probes = [], client, showArc, className }: 
         <g>
           <circle cx={clientPt.x} cy={clientPt.y} r={5} fill="#f59e0b" stroke="#fff" strokeWidth="1.5" />
           <text x={clientPt.x} y={clientPt.y - 10} textAnchor="middle" fill="#fbbf24" fontSize="9">
-            Client
+            {interactive ? "You" : "Client"}
           </text>
         </g>
       )}
+
+      {hoveredRegion && (() => {
+        const pt = project(hoveredRegion.lat, hoveredRegion.lon);
+        const probe = probeMap[hoveredRegion.id];
+        const latency = probe?.latency_ms ?? hoveredRegion.latency;
+        return (
+          <g pointerEvents="none">
+            <rect
+              x={pt.x - 52}
+              y={pt.y - 48}
+              width={104}
+              height={36}
+              rx={4}
+              fill="#0c0c12"
+              stroke="#5b52ff"
+              strokeOpacity={0.4}
+            />
+            <text x={pt.x} y={pt.y - 32} textAnchor="middle" fill="#e8e6e1" fontSize="10" fontWeight="600">
+              {hoveredRegion.label}
+            </text>
+            <text x={pt.x} y={pt.y - 18} textAnchor="middle" fill="#94a3b8" fontSize="9">
+              {probe?.healthy !== false ? "healthy" : "down"}
+              {latency != null ? ` · ${Math.round(latency)}ms` : ""}
+            </text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }

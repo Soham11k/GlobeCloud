@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import math
-import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Optional
 
+from globe.config import get_settings
 from globe.database.models import REGIONS, RegionConfig
 from globe.database.peer import PeerClient
 
@@ -32,9 +31,9 @@ class RegionHealth:
 
 @dataclass
 class GeoRouter:
-    """Routes requests to the nearest healthy region with circuit breaking."""
+    """Routes requests to the nearest healthy region via HTTP health probes."""
 
-    deployment_mode: str = "local"
+    deployment_mode: str = "regional"
     local_region_id: str = "us-east-1"
     peer_clients: Dict[str, PeerClient] = field(default_factory=dict)
     failure_threshold: int = 3
@@ -43,27 +42,6 @@ class GeoRouter:
     _opened_at: dict = field(default_factory=dict)
     _health: dict = field(default_factory=dict)
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-    def haversine_km(
-        self, lat1: float, lon1: float, lat2: float, lon2: float
-    ) -> float:
-        r = 6371.0
-        p1, p2 = math.radians(lat1), math.radians(lat2)
-        dlat = math.radians(lat2 - lat1)
-        dlon = math.radians(lon2 - lon1)
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(p1) * math.cos(p2) * math.sin(dlon / 2) ** 2
-        )
-        return 2 * r * math.asin(math.sqrt(a))
-
-    def estimated_latency_ms(
-        self, client_lat: float, client_lon: float, region: RegionConfig
-    ) -> float:
-        distance_km = self.haversine_km(
-            client_lat, client_lon, region.latitude, region.longitude
-        )
-        return region.base_latency_ms + distance_km * 0.08
 
     async def probe_region(
         self, region: RegionConfig, client_lat: float, client_lon: float
@@ -84,23 +62,20 @@ class GeoRouter:
 
         is_local = region.id == self.local_region_id and self.deployment_mode != "gateway"
         peer = self.peer_clients.get(region.id)
+        settings = get_settings()
 
         if self.deployment_mode == "regional" and region.id == self.local_region_id:
-            latency = self.estimated_latency_ms(client_lat, client_lon, region)
+            latency = 5.0
             failed = False
-        elif self.deployment_mode in ("regional", "gateway") and peer is not None:
+        elif peer is not None:
             healthy, latency = await peer.probe_health()
             failed = not healthy
-        elif self.deployment_mode == "gateway" and peer is None:
-            latency = self.estimated_latency_ms(client_lat, client_lon, region)
-            failed = True
+        elif settings.is_development and self.deployment_mode != "gateway":
+            latency = region.base_latency_ms
+            failed = False
         else:
-            latency = self.estimated_latency_ms(client_lat, client_lon, region)
-            simulate = os.environ.get("SIMULATE_FAILURES", "").lower() in ("1", "true", "yes")
-            failed = simulate and self.deployment_mode == "local"
-            if not failed and self.deployment_mode == "local":
-                await asyncio.sleep(min(latency / 1000.0, 0.05))
-            healthy = not failed
+            latency = float("inf")
+            failed = True
 
         async with self._lock:
             if failed:
@@ -160,10 +135,7 @@ class GeoRouter:
                 return preferred, probes
 
         if not healthy:
-            fallback = min(
-                REGIONS,
-                key=lambda r: self.estimated_latency_ms(client_lat, client_lon, r),
-            )
+            fallback = min(REGIONS, key=lambda r: r.base_latency_ms)
             return fallback, probes
 
         best = min(healthy, key=lambda p: p.latency_ms)

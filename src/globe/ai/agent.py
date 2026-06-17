@@ -5,7 +5,6 @@ import re
 from dataclasses import dataclass
 
 from globe.ai.rag import InferenceClient, RAGIndex, RetrievedChunk
-from globe.database.models import DatabaseCluster
 from globe.database.sync import ReplicationEngine
 from globe.routing.geo_router import GeoRouter
 
@@ -24,7 +23,7 @@ class DatabaseAgent:
 
     def __init__(
         self,
-        cluster: DatabaseCluster,
+        cluster,
         router: GeoRouter,
         replicator: ReplicationEngine,
         rag: RAGIndex,
@@ -69,7 +68,7 @@ class DatabaseAgent:
             }
         )
 
-        chunks = self.rag.search(question, top_k=3, region=region.id)
+        chunks = await self.rag.search(question, top_k=3, region=region.id)
         citations = [
             {
                 "doc_id": c.doc_id,

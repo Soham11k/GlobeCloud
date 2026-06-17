@@ -3,7 +3,7 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from globe.api.auth import require_api_key
+from globe.api.auth import require_api_access
 from globe.api.routes import AgentRequest, KnowledgeRequest, OrderRequest, ProductImportRequest, ProductRequest
 from globe.config import get_settings
 from globe.database.models import REGIONS
@@ -22,7 +22,7 @@ def build_gateway_peers() -> dict:
 
 def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
     settings = get_settings()
-    api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
+    api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_access)])
 
     @api.get("/product")
     async def product_info() -> dict:
@@ -42,6 +42,9 @@ def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
             "regions": len(proxy.peers),
             "peers": list(proxy.peers.keys()),
             "auth_required": settings.auth_enabled,
+            "user_auth_required": settings.user_auth_required,
+            "guest_read_enabled": settings.guest_read_enabled,
+            "oauth_providers": settings.oauth_providers,
             "llm_mode": "openai" if settings.llm_enabled else "mock",
         }
 

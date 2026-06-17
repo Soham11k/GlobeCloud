@@ -3,16 +3,27 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Callable, Optional
-
-from globe.database.models import DatabaseCluster
+from typing import Callable, Optional, Protocol
 
 logger = logging.getLogger(__name__)
 
 
+class ClusterProtocol(Protocol):
+    deployment_mode: str
+    local_region_id: str
+    peers: dict
+    peer_urls: dict
+    regions: dict
+
+    def is_local(self, region_id: str) -> bool: ...
+    def get(self, region_id: str): ...
+    def local_db(self): ...
+    def region_ids(self) -> list[str]: ...
+
+
 @dataclass
 class ReplicationEngine:
-    cluster: DatabaseCluster
+    cluster: ClusterProtocol
     interval_s: float = 2.0
     on_sync: Optional[Callable[[], None]] = None
     _task: asyncio.Task | None = field(default=None, init=False)
@@ -40,9 +51,12 @@ class ReplicationEngine:
     async def sync_once(self) -> dict:
         if self.cluster.deployment_mode == "regional":
             return await self._sync_regional()
-        return await self._sync_local()
+        if self.cluster.deployment_mode == "gateway":
+            return {"cycles": self._cycles, "entries_applied": 0, "mode": "gateway"}
+        return await self._sync_multi_local()
 
-    async def _sync_local(self) -> dict:
+    async def _sync_multi_local(self) -> dict:
+        """Sync across co-located regional DBs (dev compose with shared network)."""
         applied = 0
         region_ids = list(self.cluster.regions.keys())
         for target_id in region_ids:
@@ -64,7 +78,7 @@ class ReplicationEngine:
                     target.update_sync_cursor(source_id, max_seq)
         self._cycles += 1
         self._last_applied = applied
-        result = {"cycles": self._cycles, "entries_applied": applied, "mode": "local"}
+        result = {"cycles": self._cycles, "entries_applied": applied, "mode": "multi_local"}
         if applied > 0 and self.on_sync:
             self.on_sync()
         return result

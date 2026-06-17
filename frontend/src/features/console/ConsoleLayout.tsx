@@ -1,5 +1,5 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
   Route,
@@ -14,8 +14,10 @@ import {
 } from "lucide-react";
 import { useProduct, useHealth, useMetrics } from "@/lib/hooks";
 import { setApiKey, getApiKey } from "@/lib/api";
+import { getCachedUser, getSession, logout } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { GuestBanner } from "@/components/auth/GuestBanner";
 import { ConsoleProvider } from "./ConsoleContext";
 import { StatusLED, Chip } from "./components/ui";
 import "./console.css";
@@ -28,17 +30,26 @@ const NAV = [
   { to: "/app/agent", icon: MessageSquare, label: "Agent" },
   { to: "/app/docs", icon: BookOpen, label: "Docs" },
   { to: "/app/audit", icon: ScrollText, label: "Audit" },
+  { to: "/app/settings/billing", icon: Settings, label: "Billing" },
+  { to: "/app/settings/team", icon: Settings, label: "Team" },
+  { to: "/app/settings/api-keys", icon: Settings, label: "API keys" },
   { to: "/app/fleet", icon: Globe, label: "Fleet", gateway: true },
 ] as const;
 
 function ConsoleShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: product } = useProduct();
   const { data: health } = useHealth();
   const { data: metrics } = useMetrics();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(getApiKey());
+  const [user, setUser] = useState(getCachedUser());
+
+  useEffect(() => {
+    getSession().then(setUser);
+  }, []);
 
   const isGateway = product?.deployment_mode === "gateway";
   const healthyCount = metrics?.router.filter((r) => r.healthy).length ?? 0;
@@ -90,7 +101,7 @@ function ConsoleShell() {
             <StatusLED status={health?.status === "ok" ? "ok" : "err"} />
             <span className="text-sm font-medium tracking-tight">GlobeCloud</span>
             <Chip>{product?.deployment_mode ?? "—"}</Chip>
-            {product?.is_simulated && <Chip variant="warn">single-host</Chip>}
+            {product?.is_simulated && <Chip>Dev mode · 3 replicas</Chip>}
           </div>
           <div className="flex flex-wrap items-center gap-2 console-mono text-[10px] text-[var(--gc-muted)]">
             <span>{healthyCount}/{regionCount} regions</span>
@@ -100,17 +111,19 @@ function ConsoleShell() {
             <span>{product?.catalog_products ?? 0} SKUs</span>
             <span className="text-[var(--gc-dim)]">·</span>
             <span>{product?.knowledge_docs ?? 0} docs</span>
+            {user && (
+              <>
+                <span className="text-[var(--gc-dim)]">·</span>
+                <span className="text-[var(--gc-text)]">{user.email}</span>
+              </>
+            )}
             <a href="/api/docs" target="_blank" rel="noopener" className="console-mono text-[var(--gc-accent)] hover:underline flex items-center gap-1 ml-1">
               API <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </header>
 
-        {product?.simulation_note && (
-          <p className="border-b border-[var(--gc-border)] bg-[var(--gc-surface)] px-4 py-2 console-mono text-[10px] text-[var(--gc-warn)] md:px-6">
-            {product.simulation_note}
-          </p>
-        )}
+        <GuestBanner />
 
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet />
@@ -138,7 +151,24 @@ function ConsoleShell() {
             className="console-panel h-full w-full max-w-sm border-l border-[var(--gc-border)] p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-sm font-semibold mb-4">Connection</h2>
+            <h2 className="text-sm font-semibold mb-4">Account</h2>
+            {user && (
+              <div className="mb-4 rounded border border-[var(--gc-border)] p-3">
+                <p className="text-sm font-medium">{user.name || user.email}</p>
+                <p className="console-mono text-[10px] text-[var(--gc-dim)]">{user.email}</p>
+                <button
+                  type="button"
+                  className="console-btn mt-3 w-full"
+                  onClick={async () => {
+                    await logout();
+                    navigate("/login");
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+            <h3 className="text-xs font-semibold mb-2 text-[var(--gc-muted)]">Developer keys</h3>
             <label className="block space-y-2 mb-4">
               <span className="console-mono text-[10px] text-[var(--gc-dim)]">X-API-Key (GlobeCloud host)</span>
               <input

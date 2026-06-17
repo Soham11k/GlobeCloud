@@ -8,6 +8,9 @@ import { AgentPage } from "./pages/AgentPage";
 import { DocsPage } from "./pages/DocsPage";
 import { AuditPage } from "./pages/AuditPage";
 import { FleetPage } from "./pages/FleetPage";
+import { BillingPage } from "./pages/BillingPage";
+import { TeamPage } from "./pages/TeamPage";
+import { ApiKeysPage } from "./pages/ApiKeysPage";
 import { useProduct } from "@/lib/hooks";
 
 function FleetGuard() {
@@ -38,6 +41,9 @@ export function ConsoleApp() {
         <Route path="copilot" element={<LegacyRedirect to="/app/agent" />} />
         <Route path="docs" element={<DocsPage />} />
         <Route path="audit" element={<AuditPage />} />
+        <Route path="settings/billing" element={<BillingPage />} />
+        <Route path="settings/team" element={<TeamPage />} />
+        <Route path="settings/api-keys" element={<ApiKeysPage />} />
         <Route path="fleet" element={<FleetGuard />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Route>

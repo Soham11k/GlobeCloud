@@ -1,9 +1,10 @@
-import { useGlobalStatus } from "@/lib/hooks";
+import { useGlobalStatus, useRegions } from "@/lib/hooks";
 import { Panel, DataTable, Kpi, StatusLED } from "../components/ui";
 import { GlobeMap } from "@/components/GlobeMap";
 
 export function FleetPage() {
   const { data, isLoading, isError, error } = useGlobalStatus(true);
+  const { data: regions } = useRegions();
 
   return (
     <div className="space-y-4">
@@ -14,6 +15,7 @@ export function FleetPage() {
 
       <Panel title="Topology">
         <GlobeMap
+          regions={regions?.regions}
           probes={data?.regions.map((r) => ({ region_id: r.region_id, healthy: r.healthy })) ?? []}
           className="w-full h-56"
         />

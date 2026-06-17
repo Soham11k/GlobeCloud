@@ -7,6 +7,13 @@ import { LandingGate } from "@/pages/LandingGate";
 import { WelcomePage } from "@/pages/WelcomePage";
 import { ConsolePage } from "@/pages/ConsolePage";
 import { StatusPage } from "@/pages/StatusPage";
+import { LoginPage } from "@/pages/LoginPage";
+import { SignupPage } from "@/pages/SignupPage";
+import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { AuthRedirect } from "@/components/auth/AuthRedirect";
+import { hydrateAuthFromStorage } from "@/lib/auth";
+
+hydrateAuthFromStorage();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +28,9 @@ export default function App() {
         <TooltipProvider>
           <BrowserRouter>
             <Routes>
+              <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />
+              <Route path="/signup" element={<AuthRedirect><SignupPage /></AuthRedirect>} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/" element={<LandingGate />} />
               <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/status" element={<StatusPage />} />

@@ -41,6 +41,7 @@ export function RoutePage() {
           <GlobeMap
             selected={route.data?.selected_region}
             probes={route.data?.probes ?? regions?.regions.map((r) => ({ region_id: r.id, healthy: true }))}
+            regions={regions?.regions}
             client={{ lat: parseFloat(lat) || 0, lon: parseFloat(lon) || 0 }}
             showArc={!!route.data}
             className="w-full h-64"

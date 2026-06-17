@@ -163,7 +163,18 @@ export function useOrders(region: string) {
 export function useGlobalStatus(enabled: boolean) {
   return useQuery({
     queryKey: ["global-status"],
-    queryFn: () => api<{ regions: RouterRegion[] }>("/global/status"),
+    queryFn: () =>
+      api<{
+        status: string;
+        healthy_regions: number;
+        total_regions: number;
+        regions: {
+          region_id: string;
+          peer_url: string;
+          healthy: boolean;
+          latency_ms?: number;
+        }[];
+      }>("/global/status"),
     enabled,
     refetchInterval: 15000,
   });
