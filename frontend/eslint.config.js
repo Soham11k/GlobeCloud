@@ -19,4 +19,21 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/components/ui/**'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: [
+      'src/features/console/ConsoleContext.tsx',
+      'src/components/brand/PlanIcon.tsx',
+      'src/components/charts/ChartContainer.tsx',
+      'src/components/globe/GlobeScene3D.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { useProduct, useRegions } from "@/lib/hooks";
 
@@ -20,20 +20,19 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
   const { data: product } = useProduct();
   const { data: regionsData } = useRegions();
   const localRegion = regionsData?.local_region ?? product?.local_region ?? "us-east-1";
-  const regionIds = regionsData?.regions.map((r) => r.id) ?? [];
+  const regionIds = useMemo(
+    () => regionsData?.regions.map((r) => r.id) ?? [],
+    [regionsData?.regions],
+  );
 
-  const [region, setRegionState] = useState(localRegion);
+  const [selectedRegion, setRegionState] = useState(localRegion);
+  const region =
+    regionIds.length && !regionIds.includes(selectedRegion) ? localRegion : selectedRegion;
   const [client, setClientState] = useState<ClientCoords>({
     lat: 40.71,
     lon: -74.01,
     label: "NYC",
   });
-
-  useEffect(() => {
-    if (regionIds.length && !regionIds.includes(region)) {
-      setRegionState(localRegion);
-    }
-  }, [regionIds, localRegion, region]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -60,7 +59,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
   return (
     <ConsoleContext.Provider
       value={{
-        region: regionIds.includes(region) ? region : localRegion,
+        region,
         setRegion,
         client,
         setClient,

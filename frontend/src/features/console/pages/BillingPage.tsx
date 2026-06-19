@@ -52,7 +52,7 @@ export function BillingPage() {
   const checkout = async (plan: string) => {
     try {
       const res = await startCheckout(plan);
-      if (res.checkout_url) window.location.href = res.checkout_url;
+      if (res.checkout_url) window.location.assign(res.checkout_url);
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -61,7 +61,7 @@ export function BillingPage() {
   const portal = async () => {
     try {
       const res = await openBillingPortal();
-      if (res.portal_url) window.location.href = res.portal_url;
+      if (res.portal_url) window.location.assign(res.portal_url);
     } catch (e) {
       toast.error((e as Error).message);
     }

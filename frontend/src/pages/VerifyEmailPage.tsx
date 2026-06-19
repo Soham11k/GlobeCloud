@@ -9,13 +9,12 @@ export function VerifyEmailPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token") ?? "";
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ok" | "error">(() =>
+    token ? "loading" : "error",
+  );
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      return;
-    }
+    if (!token) return;
     verifyEmail(token)
       .then(() => {
         setStatus("ok");

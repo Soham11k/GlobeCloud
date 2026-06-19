@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 import asyncio
@@ -13,6 +15,7 @@ from globe.config import get_settings
 from globe.database.models import REGIONS
 from globe.database.peer import PeerClient
 from globe.gateway.proxy import GatewayProxy, format_proxy_error
+from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
 
 
@@ -29,11 +32,8 @@ def build_gateway_peers() -> dict:
     }
 
 
-from globe.observability.store import ObservabilityStore
-
-
 def build_gateway_router(
-    proxy: GatewayProxy, router: GeoRouter, observ: ObservabilityStore | None = None
+    proxy: GatewayProxy, router: GeoRouter, observ: Optional[ObservabilityStore] = None
 ) -> APIRouter:
     settings = get_settings()
     api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_access)])

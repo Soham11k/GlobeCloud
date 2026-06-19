@@ -28,7 +28,6 @@ from globe.observability.sampler import MetricsSampler, observability_path
 from globe.observability.sentry import init_sentry
 from globe.observability.store import ObservabilityStore
 from globe.routing.geo_router import GeoRouter
-from globe.routing.geo_router import GeoRouter
 
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 DIST_DIR = STATIC_DIR / "dist"
