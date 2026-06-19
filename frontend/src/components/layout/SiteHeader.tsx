@@ -19,7 +19,7 @@ export function SiteHeader({ className, onNavigate, showMarketingLinks = true, s
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b border-border/60 glass backdrop-blur-xl",
+        "sticky top-0 z-40 border-b console-chrome",
         className
       )}
     >

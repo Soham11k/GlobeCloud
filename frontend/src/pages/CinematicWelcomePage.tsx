@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { Route, RefreshCw, MessageCircle, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markWelcomed } from "@/lib/welcome";
 import { useMetrics, useProduct, useSyncStatus, useRegions } from "@/lib/hooks";
 import { CinematicShell } from "@/components/layout/CinematicShell";
 import { SiteHeader } from "@/components/layout/SiteHeader";
-import { GlobeScene3DLazy } from "@/components/globe/GlobeScene3DLazy";
+import { GlobeScenePanel } from "@/components/globe/GlobeScenePanel";
 
 export function CinematicWelcomePage() {
   const { data: metrics } = useMetrics();
@@ -24,7 +23,7 @@ export function CinematicWelcomePage() {
   const avgMs = metrics?.router.length
     ? Math.round(
         metrics.router.filter((r) => r.latency_ms != null).reduce((s, r) => s + (r.latency_ms ?? 0), 0) /
-          Math.max(1, metrics.router.filter((r) => r.latency_ms != null).length)
+          Math.max(1, metrics.router.filter((r) => r.latency_ms != null).length),
       )
     : null;
 
@@ -32,105 +31,81 @@ export function CinematicWelcomePage() {
 
   return (
     <CinematicShell className="min-h-screen">
-      <GlobeScene3DLazy
-        className="fixed inset-0 z-0 h-full w-full"
-        regions={regionsData?.regions}
-        latencies={latencies}
-        healthy={healthy}
-        variant="hero"
-      />
+      <SiteHeader className="console-chrome" onNavigate={enter} />
 
-      <div className="pointer-events-none fixed inset-0 z-[1] cinematic-vignette" />
-
-      <div className="relative z-10 flex min-h-screen flex-col pointer-events-none">
-        <SiteHeader className="pointer-events-auto border-b border-border/50 bg-background/30 backdrop-blur-md" onNavigate={enter} />
-
-        <motion.div
-          className="pointer-events-auto flex max-w-xl flex-1 flex-col justify-center px-6 py-12 md:px-12 md:py-16"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-accent">
-            <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-accent" />
-            {product?.regions ?? 3}-region · {product?.deployment_mode ?? "local"}
-          </div>
-          <h1 className="mb-4 text-4xl font-light leading-[1.05] tracking-[-0.035em] text-foreground sm:text-5xl md:text-[56px]">
-            Your data,
-            <br />
-            <em className="font-bold not-italic">everywhere</em>
-            <br />
-            <span className="text-accent">at once.</span>
-          </h1>
-          <p className="mb-8 max-w-md text-sm leading-[1.75] text-muted-foreground">
-            Replication across US, EU, and AP. Reads land on the nearest replica. Ask your docs in plain language.
+      <div className="section-wrap grid gap-8 py-10 lg:grid-cols-2 lg:py-16">
+        <div className="flex flex-col justify-center">
+          <p className="font-mono text-xs text-muted-foreground">
+            {product?.deployment_mode ?? "local"} · {product?.regions ?? 3} regions
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" className="glow-ring" asChild>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+            GlobeCloud console
+          </h1>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Probe latency across us-east-1, eu-west-1, and ap-south-1. Replication runs every{" "}
+            {sync?.interval_s ?? "—"}s via transactional outbox.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button size="lg" asChild>
               <Link to="/app" onClick={enter}>
                 <Terminal className="h-4 w-4" /> Open console
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <a href="/api/docs" target="_blank" rel="noopener">
-                Read the docs
+                API reference
               </a>
             </Button>
           </div>
-        </motion.div>
-
-        <div className="pointer-events-auto mt-auto grid grid-cols-3 border-t border-border/50 bg-background/40 backdrop-blur-md">
-          <div className="border-r border-border/50 px-4 py-5 md:px-8">
-            <div className="geo-healthy font-mono text-2xl font-medium tracking-[-0.03em] md:text-[28px]">
-              {avgMs ?? "—"}
-              <span className="text-xs font-normal opacity-40">ms</span>
+          <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-border/40 pt-6 font-mono text-sm">
+            <div>
+              <dt className="text-xs text-muted-foreground">avg latency</dt>
+              <dd className="mt-1 tabular-nums">{avgMs != null ? `${avgMs}ms` : "—"}</dd>
             </div>
-            <div className="text-[10px] tracking-wide text-muted-foreground md:text-[11px]">avg read latency</div>
-          </div>
-          <div className="border-r border-border/50 px-4 py-5 md:px-8">
-            <div className="font-mono text-2xl font-medium tracking-[-0.03em] text-foreground md:text-[28px]">
-              {sync?.interval_s ?? "—"}
-              <span className="text-xs font-normal opacity-40">s</span>
+            <div>
+              <dt className="text-xs text-muted-foreground">sync interval</dt>
+              <dd className="mt-1 tabular-nums">{sync?.interval_s ?? "—"}s</dd>
             </div>
-            <div className="text-[10px] tracking-wide text-muted-foreground md:text-[11px]">sync interval</div>
-          </div>
-          <div className="px-4 py-5 md:px-8">
-            <div className="font-mono text-2xl font-medium tracking-[-0.03em] text-foreground md:text-[28px]">
-              {product?.knowledge_docs ?? "—"}
-              <span className="text-xs font-normal opacity-40"> docs</span>
+            <div>
+              <dt className="text-xs text-muted-foreground">knowledge docs</dt>
+              <dd className="mt-1 tabular-nums">{product?.knowledge_docs ?? "—"}</dd>
             </div>
-            <div className="text-[10px] tracking-wide text-muted-foreground md:text-[11px]">knowledge base</div>
-          </div>
+          </dl>
         </div>
 
-        <div className="pointer-events-auto hidden border-t border-border/50 bg-background/30 backdrop-blur-sm md:grid md:grid-cols-3">
-          {[
-            { icon: Route, name: "Route", desc: "Latency-aware region selection. Reads hit the closest healthy node.", mono: "→ geo_routing: true" },
-            { icon: RefreshCw, name: "Replicate", desc: "Append-only logs sync across regions. Full audit trail.", mono: "→ multi_region: true" },
-            { icon: MessageCircle, name: "Ask", desc: "Grounded RAG copilot answers from your docs with citations.", mono: `→ rag_agent: ${product?.llm_mode ?? "openai"}` },
-          ].map(({ icon: Icon, name, desc, mono }, i) => (
-            <div
-              key={name}
-              className={`px-6 py-5 md:px-8 ${i < 2 ? "border-border/50 md:border-r" : ""}`}
-            >
-              <div className="mb-2 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-[7px] border border-accent/30 text-accent">
-                  <Icon className="h-3.5 w-3.5" />
-                </div>
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{name}</span>
-              </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
-              <p className="mt-2 font-mono text-[10px] tracking-wider text-accent">{mono}</p>
-            </div>
-          ))}
-        </div>
-
-        <p className="pointer-events-auto border-t border-border/50 py-4 text-center text-[11px] text-muted-foreground">
-          <Link to="/" onClick={enter} className="text-accent hover:underline">
-            Continue to marketing site →
-          </Link>
-        </p>
+        <GlobeScenePanel
+          className="w-full"
+          height="min(400px, 50vh)"
+          regions={regionsData?.regions}
+          latencies={latencies}
+          healthy={healthy}
+          variant="hero"
+          showMapInset
+        />
       </div>
+
+      <div className="section-wrap grid gap-6 border-t border-border py-10 md:grid-cols-3">
+        {[
+          { icon: Route, name: "Route", desc: "POST /api/v1/route picks the lowest-latency peer.", mono: "geo_routing: true" },
+          { icon: RefreshCw, name: "Replicate", desc: "Outbox syncs catalog and orders across Postgres regions.", mono: "multi_region: true" },
+          { icon: MessageCircle, name: "Agent", desc: "pgvector RAG with citations from regional knowledge docs.", mono: `llm: ${product?.llm_mode ?? "openai"}` },
+        ].map(({ icon: Icon, name, desc, mono }) => (
+          <div key={name} className="console-panel p-5">
+            <div className="mb-2 flex items-center gap-2">
+              <Icon className="h-4 w-4 text-accent" />
+              <span className="text-sm font-medium">{name}</span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
+            <p className="mt-2 font-mono text-[10px] text-muted-foreground">{mono}</p>
+          </div>
+        ))}
+      </div>
+
+      <p className="section-wrap pb-8 text-center text-xs text-muted-foreground">
+        <Link to="/" onClick={enter} className="text-accent hover:underline">
+          Continue to marketing site →
+        </Link>
+      </p>
     </CinematicShell>
   );
 }

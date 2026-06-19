@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LoadingState } from "@/components/layout/LoadingState";
 import { Panel, DataTable } from "../components/ui";
+import { CodeBlock } from "../components/CodeBlock";
 import { useApiKeys } from "@/lib/hooks";
 import { useAuth } from "@/lib/useAuth";
 import { createApiKey, revokeApiKey } from "@/lib/settings";
@@ -106,10 +107,11 @@ export function ApiKeysPage() {
         )}
       </Panel>
 
-      <div className="glass-panel p-6">
+      <div className="console-panel p-6">
         <h2 className="text-base font-medium">Developer host key</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Optional X-API-Key for local or host-level auth. OpenAI runs server-side via OPENAI_API_KEY.
+          Optional <code className="font-mono text-xs">X-API-Key</code> header for local auth. Server LLM uses{" "}
+          <code className="font-mono text-xs">OPENAI_API_KEY</code>.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Input
@@ -143,6 +145,12 @@ export function ApiKeysPage() {
         </div>
       </div>
 
+      <CodeBlock
+        code={`curl -s /api/v1/product \\
+  -H "X-API-Key: YOUR_KEY"`}
+        language="curl"
+      />
+
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
@@ -161,7 +169,7 @@ export function ApiKeysPage() {
       </Dialog>
 
       <Dialog open={!!revealedKey} onOpenChange={() => setRevealedKey(null)}>
-        <DialogContent className="glass-panel border-accent/30">
+        <DialogContent className="console-panel">
           <DialogHeader>
             <DialogTitle>Save your API key</DialogTitle>
             <DialogDescription className="text-warning">

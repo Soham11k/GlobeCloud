@@ -32,7 +32,7 @@ def get_platform_engine() -> Engine:
     global _platform_engine, _PlatformSession
     settings = get_settings()
     if _platform_engine is None:
-        _platform_engine = _make_engine(settings.database_url)
+        _platform_engine = _make_engine(settings.platform_database_url)
         _PlatformSession = sessionmaker(
             bind=_platform_engine, autoflush=False, autocommit=False, expire_on_commit=False
         )
@@ -102,7 +102,7 @@ def migrate_db() -> None:
     root = Path(__file__).resolve().parents[3]
     cfg = Config(str(root / "alembic.ini"))
     settings = get_settings()
-    cfg.set_main_option("sqlalchemy.url", settings.database_url)
+    cfg.set_main_option("sqlalchemy.url", settings.platform_database_url)
     command.upgrade(cfg, "head")
 
 

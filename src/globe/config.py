@@ -1,7 +1,10 @@
 from functools import lru_cache
 from typing import Dict
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from globe.db.url import normalize_database_url
 
 
 def parse_peer_urls(raw: str) -> Dict[str, str]:
@@ -33,10 +36,18 @@ class Settings(BaseSettings):
     port: int = 8000
     data_dir: str = "data"
 
-    # PostgreSQL data plane
+    # PostgreSQL data plane (Supabase = hosted Postgres; paste URI from Project Settings → Database)
     database_url: str = "postgresql+psycopg://globe:globe@localhost:5432/globe_platform"
+    supabase_database_url: str = ""
     regional_database_url: str = ""
     environment: str = "development"  # development | staging | production
+
+    @field_validator("database_url", "supabase_database_url", "regional_database_url", mode="before")
+    @classmethod
+    def _strip_db_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
     # Redis (rate limits, sessions)
     redis_url: str = ""
@@ -93,12 +104,26 @@ class Settings(BaseSettings):
         return self.environment.strip().lower() == "development"
 
     @property
+    def platform_database_url(self) -> str:
+        """Resolved platform DB URL (Supabase URI or DATABASE_URL), normalized for psycopg."""
+        raw = self.supabase_database_url or self.database_url
+        return normalize_database_url(raw)
+
+    @property
     def regional_db_url(self) -> str:
-        return self.regional_database_url.strip() or self.database_url
+        regional = self.regional_database_url.strip()
+        if regional:
+            return normalize_database_url(regional)
+        return self.platform_database_url
+
+    @property
+    def uses_supabase(self) -> bool:
+        raw = (self.supabase_database_url or self.database_url).lower()
+        return "supabase.co" in raw or "supabase.com" in raw
 
     @property
     def uses_sqlite(self) -> bool:
-        return self.database_url.startswith("sqlite") or self.regional_db_url.startswith("sqlite")
+        return self.platform_database_url.startswith("sqlite") or self.regional_db_url.startswith("sqlite")
 
     @property
     def jwt_secret_key(self) -> str:

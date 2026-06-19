@@ -110,7 +110,7 @@ export function StatusPage() {
           </p>
         </div>
 
-        <div className="glass-panel space-y-4 p-6">
+        <div className="console-panel space-y-4 p-6">
           <div className="flex items-center gap-3 text-base font-medium">
             Current status
             {hLoad ? <Skeleton className="h-6 w-24" /> : <Badge variant={statusVariant}>{status}</Badge>}
@@ -160,7 +160,7 @@ export function StatusPage() {
           showMapInset
         />
 
-        <div className="glass-panel p-6">
+        <div className="console-panel p-6">
           <h2 className="mb-4 text-base font-medium">Regions</h2>
           <div className="space-y-2">
             {mLoad
@@ -180,7 +180,7 @@ export function StatusPage() {
           </div>
         </div>
 
-        <div className="glass-panel flex items-center justify-between gap-4 p-6">
+        <div className="console-panel flex items-center justify-between gap-4 p-6">
           <p className="text-sm text-muted-foreground">Get notified about incidents</p>
           <Button variant="secondary" size="sm" asChild>
             <a href="mailto:status@globecloud.dev?subject=Subscribe">

@@ -1,4 +1,5 @@
 import { useLiveMetrics } from "@/lib/hooks";
+import { StatusDot } from "@/components/layout/StatusBadge";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -15,24 +16,22 @@ export function LivePingRail({ className, compact }: Props) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 overflow-x-auto font-mono text-[11px] tracking-tight",
-        className
+        "flex items-center gap-4 overflow-x-auto font-mono text-[11px]",
+        className,
       )}
     >
       <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-        </span>
-        {!compact && "PING"}
+        <StatusDot status={router.every((r) => r.healthy) ? "ok" : "warn"} />
+        {!compact && "probes"}
       </span>
       {router.map((r) => (
         <span
-          key={`${r.region_id}-${r.latency_ms}`}
-          className="shrink-0 tabular-nums transition-opacity duration-300"
+          key={r.region_id}
+          className="shrink-0 tabular-nums"
+          title={[r.probe_mode, r.peer_url].filter(Boolean).join(" · ") || undefined}
         >
-          <span className={r.healthy ? "text-success" : "text-danger"}>
-            {r.region_id.replace(/-(east|west|south|north|central)-\d+$/, "").replace(/-/g, "") || r.region_id}
+          <span className={r.healthy ? "text-[var(--geo-healthy)]" : "text-[var(--geo-error)]"}>
+            {r.region_id}
           </span>
           <span className="text-muted-foreground"> · </span>
           <span className="text-foreground">

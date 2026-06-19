@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function CatalogPage() {
@@ -105,10 +104,7 @@ export function CatalogPage() {
                 return (
                   <div
                     key={p.id}
-                    className={cn(
-                      "glass-panel flex flex-col gap-4 p-5",
-                      tier === "pro" && "glow-ring border-accent/30"
-                    )}
+                    className="console-panel flex flex-col gap-4 p-5"
                   >
                     <div className="flex gap-3">
                       <PlanIcon tier={tier} />

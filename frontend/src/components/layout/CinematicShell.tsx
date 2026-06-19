@@ -9,9 +9,9 @@ type Props = {
   showPingRail?: boolean;
 };
 
-export function CinematicShell({ children, className, vignette = true, showPingRail = true }: Props) {
+export function CinematicShell({ children, className, vignette = false, showPingRail = true }: Props) {
   return (
-    <div className={cn("cinematic-shell noise-bg", className)}>
+    <div className={cn("cinematic-shell", className)}>
       {vignette && <div className="pointer-events-none fixed inset-0 z-0 cinematic-vignette" aria-hidden />}
       <div className="relative z-10">{children}</div>
       {showPingRail && (

@@ -26,6 +26,7 @@
   --tier-enterprise: #18181b;
   --tier-addon: #71717a;
   --console-border: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.04);
   --console-nav-width: 13.5rem;
 }
 

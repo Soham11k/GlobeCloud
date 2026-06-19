@@ -120,8 +120,8 @@ export function AgentPage() {
                 className={cn(
                   "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
                   msg.role === "user"
-                    ? "bg-accent text-accent-foreground rounded-br-md glow-ring"
-                    : "glass rounded-bl-md"
+                    ? "bg-accent text-accent-foreground rounded-br-md"
+                    : "bg-[var(--surface-2)] rounded-bl-md border border-border/40"
                 )}
               >
                 {msg.role === "agent" ? (
@@ -143,7 +143,7 @@ export function AgentPage() {
                       </span>
                     </div>
                     {msg.meta.citations?.map((c, j) => (
-                      <div key={j} className="glass-panel mt-2 p-3 text-xs">
+                      <div key={j} className="console-panel mt-2 p-3 font-mono text-xs">
                         <p className="font-medium">{c.title}</p>
                         <p className="text-muted-foreground">
                           {c.region} · score {c.score.toFixed(2)}
@@ -158,7 +158,7 @@ export function AgentPage() {
           ))}
           <div ref={bottomRef} />
         </div>
-        <div className="glass border-t border-border/60 p-4">
+        <div className="border-t border-border/40 bg-[var(--surface-0)] p-4">
           <div className="flex gap-2">
             <Input
               value={input}

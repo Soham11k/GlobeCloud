@@ -1,8 +1,9 @@
 import { useGlobalStatus, useRegions, useLiveMetrics } from "@/lib/hooks";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LoadingState } from "@/components/layout/LoadingState";
-import { Panel, DataTable, Kpi, StatusLED } from "../components/ui";
-import { GlobeScenePanel } from "@/components/globe/GlobeScenePanel";
+import { Panel, DataTable } from "../components/ui";
+import { RegionProbeCard } from "../components/RegionProbeCard";
+import { GeoVizPanel } from "@/components/globe/GeoVizPanel";
 
 export function FleetPage() {
   const { data, isLoading, isError, error } = useGlobalStatus(true);
@@ -11,7 +12,7 @@ export function FleetPage() {
 
   const fleetRegions = data?.regions ?? liveMetrics?.router ?? [];
   const latencies = Object.fromEntries(
-    fleetRegions.filter((r) => r.latency_ms != null).map((r) => [r.region_id, r.latency_ms as number])
+    fleetRegions.filter((r) => r.latency_ms != null).map((r) => [r.region_id, r.latency_ms as number]),
   );
   const healthy = Object.fromEntries(fleetRegions.map((r) => [r.region_id, r.healthy]));
 
@@ -19,38 +20,34 @@ export function FleetPage() {
     <div className="space-y-6">
       <PageHeader
         title="Global fleet"
-        description="Gateway deployment — aggregated health across all regional peers."
+        meta="gateway"
+        description="Aggregated probe health across regional Postgres peers."
       />
 
-      <Panel title="Topology">
-        <GlobeScenePanel
-          className="w-full"
-          height="14rem"
+      <div className="console-panel overflow-hidden">
+        <GeoVizPanel
+          className="w-full rounded-none border-0"
+          height="min(320px, 40vh)"
+          variant="hero"
           regions={regions?.regions}
           latencies={latencies}
           healthy={healthy}
-          variant="panel"
+          showMapInset
         />
-      </Panel>
+      </div>
 
       {isLoading ? (
         <LoadingState rows={3} />
       ) : isError ? (
-        <div className="glass-panel p-4 text-sm text-destructive">{(error as Error).message}</div>
+        <div className="console-panel p-4 text-sm text-destructive">{(error as Error).message}</div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data?.regions.map((r) => (
-            <Kpi
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(data?.regions ?? []).map((r) => (
+            <RegionProbeCard
               key={r.region_id}
-              label={r.region_id}
-              highlight={r.healthy}
-              value={
-                <span className="inline-flex items-center gap-2">
-                  <StatusLED status={r.healthy ? "ok" : "err"} />
-                  {r.latency_ms ?? "—"}ms
-                </span>
-              }
-              sub={r.healthy ? "Healthy" : "Unreachable"}
+              regionId={r.region_id}
+              healthy={r.healthy}
+              latencyMs={r.latency_ms}
             />
           ))}
         </div>
@@ -58,11 +55,11 @@ export function FleetPage() {
 
       <Panel title="Peer detail">
         <DataTable
-          headers={["Region", "Healthy", "Latency"]}
+          headers={["region_id", "healthy", "latency_ms"]}
           rows={(data?.regions ?? []).map((r) => [
             r.region_id,
-            r.healthy ? "yes" : "no",
-            r.latency_ms != null ? `${r.latency_ms} ms` : "—",
+            r.healthy ? "true" : "false",
+            r.latency_ms != null ? `${r.latency_ms}` : "—",
           ])}
         />
       </Panel>

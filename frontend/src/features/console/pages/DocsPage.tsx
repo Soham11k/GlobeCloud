@@ -49,7 +49,7 @@ export function DocsPage() {
         <p className="text-sm text-muted-foreground">No knowledge docs in {region}.</p>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-          <nav className="glass-panel space-y-1 p-2">
+          <nav className="console-panel space-y-1 p-2">
             {docs.map((doc) => (
               <button
                 key={doc.id}
@@ -57,7 +57,7 @@ export function DocsPage() {
                 onClick={() => setSelectedId(doc.id)}
                 className={cn(
                   "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                  active?.id === doc.id ? "bg-accent/15 text-accent glow-ring" : "hover:bg-muted/50 text-muted-foreground"
+                  active?.id === doc.id ? "bg-accent/12 text-accent" : "hover:bg-muted/50 text-muted-foreground",
                 )}
               >
                 {doc.title}

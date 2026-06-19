@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,6 @@ import { ProductScreenshots } from "@/components/brand/ProductScreenshots";
 import { StepIllustration } from "@/components/brand/StepIllustration";
 import { CinematicShell } from "@/components/layout/CinematicShell";
 import { SiteHeader } from "@/components/layout/SiteHeader";
-import { SectionHeader } from "@/components/layout/SectionHeader";
 import { LiveStatBar } from "@/components/layout/LiveStatBar";
 import { GlobeScenePanel } from "@/components/globe/GlobeScenePanel";
 import { BrowserMock } from "@/components/brand/BrowserMock";
@@ -106,22 +104,16 @@ export function LandingPage() {
         </div>
 
         <div className="relative z-10 section-wrap flex flex-1 flex-col justify-end pb-14 pt-28">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-md glass-panel p-6 md:max-w-lg md:p-8"
-          >
+          <div className="max-w-lg console-panel p-6 md:p-8">
             <Badge variant="accent" className="mb-4 font-mono text-[10px]">
               {deployLabel}
             </Badge>
-            <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-foreground md:text-5xl">
-              Route globally.
-              <br />
-              <span className="text-accent">Operate locally.</span>
+            <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-4xl">
+              Multi-region Postgres routing on Fly.io
             </h1>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-              Live geo routing, multi-region replication, and a cited copilot — explore the console instantly, sign in when you need to write.
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+              Geo routing via <code className="font-mono text-xs">POST /api/v1/route</code>, transactional outbox
+              replication, and a pgvector RAG agent. Open the console without signing in.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button size="lg" asChild>
@@ -133,7 +125,7 @@ export function LandingPage() {
                 </Button>
               )}
             </div>
-          </motion.div>
+          </div>
 
           <LiveStatBar
             className="mt-10"
@@ -146,36 +138,35 @@ export function LandingPage() {
       </section>
 
       <section id="how" className="section-wrap border-t border-border py-20 md:py-24">
-        <SectionHeader
-          eyebrow="Architecture"
-          title="How it works"
-          description="Three steps from client request to cited answer — no generic middleware stack."
-        />
-        <div className="mt-12 grid md:grid-cols-3 gap-8">
-          {HOW_IT_WORKS.map((item, i) => (
-            <motion.div
-              key={item.title}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.06, duration: 0.4 }}
-              className="space-y-3"
-            >
+        <div className="mb-10">
+          <p className="font-mono text-xs text-muted-foreground">architecture</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight">How it works</h2>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Gateway probes regional Postgres peers and routes writes through the outbox.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-8 md:grid-cols-3">
+          {HOW_IT_WORKS.map((item) => (
+            <div key={item.title} className="space-y-3">
               <StepIllustration step={item.step} />
               <h3 className="font-medium text-foreground">{item.title}</h3>
               <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>
 
       <section id="proof" className="section-wrap border-t border-border py-20 md:py-24">
         <div className="grid items-start gap-12 lg:grid-cols-2">
-          <SectionHeader
-            eyebrow="Live data"
-            title="Live console data"
-            description="Routing, replication, and copilot panels read from the same API as /app."
-          />
+          <div>
+            <p className="font-mono text-xs text-muted-foreground">
+              {product?.deployment_mode ?? "regional"} · {regionsData?.regions.length ?? "—"} regions
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">Console uses the same API</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Routing, replication, and agent panels read from <code className="font-mono text-xs">/api/v1/*</code>.
+            </p>
+          </div>
           <BrowserMock url="app.globecloud.dev">
             <ProductScreenshots />
           </BrowserMock>
@@ -184,23 +175,24 @@ export function LandingPage() {
 
       <section id="pricing" className="section-wrap border-t border-border bg-muted/20 py-20 md:py-24">
         <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <SectionHeader
-            eyebrow="Catalog"
-            title="Plans & add-ons"
-            description={`Plans loaded from your database (${catalog?.products_total ?? "—"} products, ${catalog?.knowledge_docs ?? "—"} docs).`}
-          />
+          <div>
+            <p className="font-mono text-xs text-muted-foreground">catalog · {catalog?.products_total ?? "—"} products</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">Plans & add-ons</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Loaded from Postgres ({catalog?.knowledge_docs ?? "—"} knowledge docs).
+            </p>
+          </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className={!annual ? "font-medium text-foreground" : ""}>Monthly</span>
             <button
               type="button"
-              className="relative w-11 h-6 rounded-full bg-white/10 transition-colors"
+              className="relative h-6 w-11 rounded-full bg-muted transition-colors"
               onClick={() => setAnnual(!annual)}
               aria-label="Toggle annual pricing"
             >
-              <motion.span
-                className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[var(--accent)]"
-                animate={{ x: annual ? 20 : 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              <span
+                className="absolute top-1 left-1 h-4 w-4 rounded-full bg-accent transition-transform"
+                style={{ transform: annual ? "translateX(20px)" : "translateX(0)" }}
               />
             </button>
             <span className={annual ? "font-medium text-foreground" : ""}>Annual (−20%)</span>
@@ -212,7 +204,7 @@ export function LandingPage() {
             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full bg-muted/30" />)}
           </div>
         ) : plans.length === 0 ? (
-          <p className="glass-panel p-6 text-sm text-muted-foreground">
+          <p className="console-panel p-6 text-sm text-muted-foreground">
             No catalog products. Run <code className="text-xs">./scripts/seed-production.sh</code> and restart.
           </p>
         ) : (
@@ -224,7 +216,7 @@ export function LandingPage() {
                 return (
                   <div
                     key={plan.id}
-                    className={`glass-panel flex flex-col p-5 ${tier === "pro" ? "glow-ring border-accent/30" : ""}`}
+                    className="console-panel flex flex-col p-5"
                   >
                     <div className="mb-4 flex items-start gap-3">
                       <PlanIcon tier={tier} />
@@ -247,7 +239,7 @@ export function LandingPage() {
             {addons.length > 0 && (
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {addons.map((addon) => (
-                  <div key={addon.id} className="glass-panel flex gap-3 p-4">
+                  <div key={addon.id} className="console-panel flex gap-3 p-4">
                     <PlanIcon tier="addon" className="h-10 w-10 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-foreground">{addon.name}</p>
@@ -270,7 +262,7 @@ export function LandingPage() {
       </section>
 
       <section className="section-wrap border-t border-border py-20">
-        <SectionHeader title="FAQ" className="mb-10" />
+        <h2 className="mb-10 text-2xl font-semibold tracking-tight">FAQ</h2>
         <dl className="max-w-3xl space-y-6">
           {FAQ.map((item) => (
             <div key={item.q} className="border-b border-border/60 pb-6 last:border-0">

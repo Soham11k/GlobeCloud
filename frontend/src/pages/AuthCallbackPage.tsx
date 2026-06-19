@@ -20,7 +20,7 @@ export function AuthCallbackPage() {
 
   return (
     <CinematicShell className="flex min-h-screen items-center justify-center">
-      <div className="glass-panel px-8 py-6">
+      <div className="console-panel px-8 py-6">
         <LoadingState rows={1} />
         <p className="mt-4 text-center text-sm text-muted-foreground">Completing sign-in…</p>
       </div>

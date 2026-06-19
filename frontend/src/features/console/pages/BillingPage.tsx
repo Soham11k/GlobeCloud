@@ -82,7 +82,7 @@ export function BillingPage() {
       {isLoading ? (
         <KpiSkeleton count={1} />
       ) : (
-        <div className="glass-panel p-6">
+        <div className="console-panel p-6">
           <h2 className="text-base font-medium">Current plan</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {currentTier === "none"
@@ -109,9 +109,8 @@ export function BillingPage() {
             <div
               key={plan.id}
               className={cn(
-                "glass-panel p-6",
-                plan.highlighted && "glow-ring border-accent/40",
-                isCurrent && "ring-1 ring-accent/30"
+                "console-panel p-6",
+                isCurrent && "border-accent/40",
               )}
             >
               <div className="flex items-center justify-between">

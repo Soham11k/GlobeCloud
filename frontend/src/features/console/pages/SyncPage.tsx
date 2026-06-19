@@ -58,7 +58,7 @@ export function SyncPage() {
             <span
               className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-shadow ${
                 step.done
-                  ? "bg-success/15 text-success glow-ring shadow-[0_0_20px_rgba(45,212,160,0.25)]"
+                  ? "bg-success/15 text-success"
                   : "bg-muted text-muted-foreground"
               }`}
             >
