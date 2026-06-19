@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { AuthStatusCard } from "@/components/auth/AuthStatusCard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormField } from "@/components/layout/FormField";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { resetPassword } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export function ResetPasswordPage() {
@@ -13,15 +17,19 @@ export function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [confirmError, setConfirmError] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+    setConfirmError("");
     if (password !== confirm) {
-      toast.error("Passwords do not match");
+      setConfirmError("Passwords do not match");
       return;
     }
     if (!token) {
-      toast.error("Missing reset token");
+      setFormError("Missing reset token");
       return;
     }
     setLoading(true);
@@ -30,7 +38,7 @@ export function ResetPasswordPage() {
       toast.success("Password updated");
       navigate("/login", { replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Reset failed");
+      setFormError(err instanceof Error ? err.message : "Reset failed");
     } finally {
       setLoading(false);
     }
@@ -39,44 +47,58 @@ export function ResetPasswordPage() {
   if (!token) {
     return (
       <AuthLayout title="Reset password" subtitle="Invalid or missing reset link.">
-        <p className="text-sm text-muted-foreground">Request a new link from the forgot password page.</p>
-        <Button variant="outline" className="auth-submit-btn mt-6 w-full" asChild>
-          <Link to="/forgot-password">Forgot password</Link>
-        </Button>
+        <AuthStatusCard
+          status="error"
+          title="Link expired"
+          description="Request a new reset link from the forgot password page."
+          className="border-0 bg-transparent p-0 shadow-none"
+        >
+          <Button className="w-full" asChild>
+            <Link to="/forgot-password">Request new link</Link>
+          </Button>
+        </AuthStatusCard>
       </AuthLayout>
     );
   }
 
   return (
     <AuthLayout title="Choose new password" subtitle="Enter a strong password for your account.">
-      <form onSubmit={submit} className="space-y-5">
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">New password</label>
-          <Input
-            type="password"
+      <form onSubmit={submit} className="space-y-5" aria-busy={loading}>
+        {formError && (
+          <Alert variant="destructive">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        <FormField id="reset-password" label="New password">
+          <PasswordInput
+            id="reset-password"
             required
             minLength={8}
             autoComplete="new-password"
-            className="auth-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Confirm password</label>
-          <Input
-            type="password"
+        </FormField>
+        <FormField id="reset-confirm" label="Confirm password" error={confirmError}>
+          <PasswordInput
+            id="reset-confirm"
             required
             minLength={8}
             autoComplete="new-password"
-            className="auth-input"
+            hasError={!!confirmError}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">At least 8 characters</p>
-        </div>
-        <Button type="submit" variant="outline" className="auth-submit-btn w-full" disabled={loading}>
-          {loading ? "Updating…" : "Update password"}
+        </FormField>
+        <Button type="submit" className="h-11 w-full" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Updating…
+            </>
+          ) : (
+            "Update password"
+          )}
         </Button>
       </form>
     </AuthLayout>

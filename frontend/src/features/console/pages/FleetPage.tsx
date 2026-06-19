@@ -1,12 +1,14 @@
 import { useGlobalStatus, useRegions, useLiveMetrics } from "@/lib/hooks";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LoadingState } from "@/components/layout/LoadingState";
+import { ErrorState } from "@/components/layout/ErrorState";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Panel, DataTable } from "../components/ui";
 import { RegionProbeCard } from "../components/RegionProbeCard";
 import { GeoVizPanel } from "@/components/globe/GeoVizPanel";
 
 export function FleetPage() {
-  const { data, isLoading, isError, error } = useGlobalStatus(true);
+  const { data, isLoading, isError, error, refetch } = useGlobalStatus(true);
   const { data: regions } = useRegions();
   const { data: liveMetrics } = useLiveMetrics();
 
@@ -39,7 +41,16 @@ export function FleetPage() {
       {isLoading ? (
         <LoadingState rows={3} />
       ) : isError ? (
-        <div className="console-panel p-4 text-sm text-destructive">{(error as Error).message}</div>
+        <ErrorState
+          title="Fleet status unavailable"
+          description={(error as Error)?.message ?? "Could not load global status."}
+          onRetry={() => refetch()}
+        />
+      ) : !(data?.regions ?? []).length ? (
+        <EmptyState
+          title="No regions reported"
+          description="The gateway has not received probe data from regional peers yet."
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(data?.regions ?? []).map((r) => (
@@ -53,6 +64,7 @@ export function FleetPage() {
         </div>
       )}
 
+      {!isLoading && !isError && (data?.regions ?? []).length > 0 && (
       <Panel title="Peer detail">
         <DataTable
           headers={["region_id", "healthy", "latency_ms"]}
@@ -63,6 +75,7 @@ export function FleetPage() {
           ])}
         />
       </Panel>
+      )}
     </div>
   );
 }

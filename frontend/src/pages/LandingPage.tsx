@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,9 @@ import {
 } from "@/lib/hooks";
 import { useAuth } from "@/lib/useAuth";
 import { PlanIcon, tierFromProduct } from "@/components/brand/PlanIcon";
+import { cn } from "@/lib/utils";
+import { fadeUp, staggerContainer } from "@/lib/motion";
+import { useMotionPrefs } from "@/lib/useMotionPrefs";
 
 const HOW_IT_WORKS = [
   { step: "route" as const, title: "Geo routing", desc: "Probes regional health and picks the lowest-latency PostgreSQL node for each request." },
@@ -60,6 +64,8 @@ export function LandingPage() {
   const { data: sync } = useSyncStatus();
   const { isAuthenticated } = useAuth();
   const [annual, setAnnual] = useState(false);
+  const { reducedMotion } = useMotionPrefs();
+  const motionProps = reducedMotion ? {} : { initial: "initial", whileInView: "animate", viewport: { once: true, margin: "-40px" } };
 
   const plans = catalog?.plans ?? [];
   const addons = catalog?.addons ?? [];
@@ -88,7 +94,7 @@ export function LandingPage() {
     <CinematicShell>
       <SiteHeader />
 
-      <section className="relative flex min-h-[min(94vh,860px)] flex-col">
+      <section className="relative flex min-h-[min(88vh,820px)] flex-col sm:min-h-[min(94vh,860px)]">
         <div className="absolute inset-0">
           <GlobeScenePanel
             className="h-full w-full rounded-none border-0"
@@ -104,7 +110,13 @@ export function LandingPage() {
         </div>
 
         <div className="relative z-10 section-wrap flex flex-1 flex-col justify-end pb-14 pt-28">
-          <div className="max-w-lg console-panel p-6 md:p-8">
+          <motion.div
+            className="max-w-lg console-panel p-6 md:p-8"
+            variants={fadeUp}
+            initial={reducedMotion ? false : "initial"}
+            animate={reducedMotion ? undefined : "animate"}
+            transition={{ duration: 0.35 }}
+          >
             <Badge variant="accent" className="mb-4 font-mono text-[10px]">
               {deployLabel}
             </Badge>
@@ -125,7 +137,7 @@ export function LandingPage() {
                 </Button>
               )}
             </div>
-          </div>
+          </motion.div>
 
           <LiveStatBar
             className="mt-10"
@@ -145,15 +157,19 @@ export function LandingPage() {
             Gateway probes regional Postgres peers and routes writes through the outbox.
           </p>
         </div>
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
+        <motion.div
+          className="mt-12 grid gap-8 md:grid-cols-3"
+          variants={staggerContainer}
+          {...motionProps}
+        >
           {HOW_IT_WORKS.map((item) => (
-            <div key={item.title} className="space-y-3">
+            <motion.div key={item.title} className="space-y-3" variants={fadeUp}>
               <StepIllustration step={item.step} />
               <h3 className="font-medium text-foreground">{item.title}</h3>
               <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       <section id="proof" className="section-wrap border-t border-border py-20 md:py-24">
@@ -209,14 +225,22 @@ export function LandingPage() {
           </p>
         ) : (
           <>
-            <div className="grid gap-4 md:grid-cols-3">
+            <motion.div
+              className="grid gap-4 md:grid-cols-3"
+              variants={staggerContainer}
+              {...motionProps}
+            >
               {plans.map((plan) => {
                 const tier = tierFromProduct(plan.id, plan.category);
                 const price = annual ? Math.round(plan.price * 0.8) : plan.price;
                 return (
-                  <div
+                  <motion.div
                     key={plan.id}
-                    className="console-panel flex flex-col p-5"
+                    variants={fadeUp}
+                    className={cn(
+                      "console-panel flex flex-col p-5",
+                      tier === "pro" && "ring-1 ring-accent/40"
+                    )}
                   >
                     <div className="mb-4 flex items-start gap-3">
                       <PlanIcon tier={tier} />
@@ -232,10 +256,15 @@ export function LandingPage() {
                     {plan.description && (
                       <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{plan.description}</p>
                     )}
-                  </div>
+                    <Button className="mt-4 w-full" variant={tier === "pro" ? "default" : "outline"} asChild>
+                      <Link to={isAuthenticated ? "/app" : "/signup"}>
+                        {tier === "pro" ? "Get started" : "Start free"}
+                      </Link>
+                    </Button>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
             {addons.length > 0 && (
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {addons.map((addon) => (
@@ -263,14 +292,19 @@ export function LandingPage() {
 
       <section className="section-wrap border-t border-border py-20">
         <h2 className="mb-10 text-2xl font-semibold tracking-tight">FAQ</h2>
-        <dl className="max-w-3xl space-y-6">
+        <div className="max-w-3xl divide-y divide-border/60">
           {FAQ.map((item) => (
-            <div key={item.q} className="border-b border-border/60 pb-6 last:border-0">
-              <dt className="font-medium text-foreground">{item.q}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.a}</dd>
-            </div>
+            <details key={item.q} className="group py-4">
+              <summary className="cursor-pointer list-none font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center justify-between gap-4">
+                  {item.q}
+                  <span className="text-muted-foreground transition-transform group-open:rotate-45">+</span>
+                </span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+            </details>
           ))}
-        </dl>
+        </div>
       </section>
 
       <footer className="border-t border-border bg-muted/10">

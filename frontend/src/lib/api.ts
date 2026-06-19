@@ -86,6 +86,7 @@ export type ProductInfo = {
   user_auth_required?: boolean;
   guest_read_enabled?: boolean;
   oauth_providers?: string[];
+  oauth_redirect_base_url?: string;
   llm_mode: string;
   is_simulated?: boolean;
   simulation_note?: string | null;

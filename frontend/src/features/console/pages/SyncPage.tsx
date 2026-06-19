@@ -1,13 +1,14 @@
 import { useSyncStatus, useSyncMutation } from "@/lib/hooks";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LoadingState } from "@/components/layout/LoadingState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { Panel, DataTable, Kpi, StatusLED } from "../components/ui";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
 export function SyncPage() {
-  const { data: sync, isLoading } = useSyncStatus();
+  const { data: sync, isLoading, isError, refetch } = useSyncStatus();
   const syncRun = useSyncMutation();
 
   const lagRows: ReactNode[][] = [];
@@ -52,6 +53,14 @@ export function SyncPage() {
         }
       />
 
+      {isError ? (
+        <ErrorState
+          title="Replication status unavailable"
+          description="Could not load sync engine state."
+          onRetry={() => refetch()}
+        />
+      ) : (
+      <>
       <div className="flex flex-wrap gap-4">
         {steps.map((step, i) => (
           <div key={step.label} className="flex items-center gap-2">
@@ -111,6 +120,8 @@ export function SyncPage() {
           />
         </Panel>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -121,6 +121,7 @@ def build_api_router(
             "user_auth_required": settings.user_auth_required,
             "guest_read_enabled": settings.guest_read_enabled,
             "oauth_providers": settings.oauth_providers,
+            "oauth_redirect_base_url": settings.oauth_redirect_base_url.rstrip("/"),
             "llm_mode": "openai" if settings.llm_enabled else ("required" if settings.is_production else "dev"),
             "database": "postgresql",
             "catalog_products": _catalog_product_count(),

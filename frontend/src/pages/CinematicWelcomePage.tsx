@@ -1,17 +1,27 @@
 import { Link } from "react-router-dom";
 import { Route, RefreshCw, MessageCircle, Terminal } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { markWelcomed } from "@/lib/welcome";
 import { useMetrics, useProduct, useSyncStatus, useRegions } from "@/lib/hooks";
 import { CinematicShell } from "@/components/layout/CinematicShell";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { GlobeScenePanel } from "@/components/globe/GlobeScenePanel";
+import { fadeUp, staggerContainer } from "@/lib/motion";
+import { useMotionPrefs } from "@/lib/useMotionPrefs";
+
+const FEATURES = [
+  { icon: Route, name: "Route", desc: "POST /api/v1/route picks the lowest-latency peer.", mono: "geo_routing: true" },
+  { icon: RefreshCw, name: "Replicate", desc: "Outbox syncs catalog and orders across Postgres regions.", mono: "multi_region: true" },
+  { icon: MessageCircle, name: "Agent", desc: "pgvector RAG with citations from regional knowledge docs.", mono: "llm: openai" },
+];
 
 export function CinematicWelcomePage() {
   const { data: metrics } = useMetrics();
   const { data: product } = useProduct();
   const { data: sync } = useSyncStatus();
   const { data: regionsData } = useRegions();
+  const { reducedMotion } = useMotionPrefs();
 
   const latencies: Record<string, number> = {};
   const healthy: Record<string, boolean> = {};
@@ -28,13 +38,22 @@ export function CinematicWelcomePage() {
     : null;
 
   const enter = () => markWelcomed();
+  const features = FEATURES.map((f) =>
+    f.name === "Agent" ? { ...f, mono: `llm: ${product?.llm_mode ?? "openai"}` } : f,
+  );
 
   return (
     <CinematicShell className="min-h-screen">
       <SiteHeader className="console-chrome" onNavigate={enter} />
 
       <div className="section-wrap grid gap-8 py-10 lg:grid-cols-2 lg:py-16">
-        <div className="flex flex-col justify-center">
+        <motion.div
+          className="flex flex-col justify-center"
+          variants={fadeUp}
+          initial={reducedMotion ? false : "initial"}
+          animate={reducedMotion ? undefined : "animate"}
+          transition={{ duration: 0.35 }}
+        >
           <p className="font-mono text-xs text-muted-foreground">
             {product?.deployment_mode ?? "local"} · {product?.regions ?? 3} regions
           </p>
@@ -71,7 +90,7 @@ export function CinematicWelcomePage() {
               <dd className="mt-1 tabular-nums">{product?.knowledge_docs ?? "—"}</dd>
             </div>
           </dl>
-        </div>
+        </motion.div>
 
         <GlobeScenePanel
           className="w-full"
@@ -84,22 +103,24 @@ export function CinematicWelcomePage() {
         />
       </div>
 
-      <div className="section-wrap grid gap-6 border-t border-border py-10 md:grid-cols-3">
-        {[
-          { icon: Route, name: "Route", desc: "POST /api/v1/route picks the lowest-latency peer.", mono: "geo_routing: true" },
-          { icon: RefreshCw, name: "Replicate", desc: "Outbox syncs catalog and orders across Postgres regions.", mono: "multi_region: true" },
-          { icon: MessageCircle, name: "Agent", desc: "pgvector RAG with citations from regional knowledge docs.", mono: `llm: ${product?.llm_mode ?? "openai"}` },
-        ].map(({ icon: Icon, name, desc, mono }) => (
-          <div key={name} className="console-panel p-5">
+      <motion.div
+        className="section-wrap grid gap-6 border-t border-border py-10 md:grid-cols-3"
+        variants={staggerContainer}
+        initial={reducedMotion ? false : "initial"}
+        whileInView={reducedMotion ? undefined : "animate"}
+        viewport={{ once: true, margin: "-40px" }}
+      >
+        {features.map(({ icon: Icon, name, desc, mono }) => (
+          <motion.div key={name} className="console-panel p-5" variants={fadeUp}>
             <div className="mb-2 flex items-center gap-2">
               <Icon className="h-4 w-4 text-accent" />
               <span className="text-sm font-medium">{name}</span>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
             <p className="mt-2 font-mono text-[10px] text-muted-foreground">{mono}</p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <p className="section-wrap pb-8 text-center text-xs text-muted-foreground">
         <Link to="/" onClick={enter} className="text-accent hover:underline">

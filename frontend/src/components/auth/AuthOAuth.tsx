@@ -39,52 +39,29 @@ function GitHubIcon() {
 }
 
 function OAuthSetupHint() {
-  const origin = window.location.origin;
+  const { data: product } = useProduct();
+  const base = product?.oauth_redirect_base_url?.replace(/\/$/, "") ?? window.location.origin;
+  const alt = base.includes("127.0.0.1")
+    ? base.replace("127.0.0.1", "localhost")
+    : base.replace("localhost", "127.0.0.1");
 
   return (
     <div className="mt-3 rounded-lg border border-border/60 bg-muted/20 p-3 text-[11px] leading-relaxed text-muted-foreground">
       <p className="font-medium text-foreground">OAuth setup (one-time)</p>
       <ol className="mt-2 list-decimal space-y-1.5 pl-4">
         <li>
-          <a
-            href="https://console.cloud.google.com/apis/credentials"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
-          >
-            Google Cloud Console
-          </a>
-          {" · "}
-          <a
-            href="https://github.com/settings/developers"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
-          >
-            GitHub Developer Settings
-          </a>
+          In Google Cloud Console → Credentials → OAuth client, add{" "}
+          <strong>both</strong> redirect URIs (localhost and 127.0.0.1 are different):
+          <ul className="mt-1 list-disc pl-4 font-mono text-[10px]">
+            <li>{base}/auth/oauth/callback/google</li>
+            <li>{alt}/auth/oauth/callback/google</li>
+          </ul>
         </li>
+        <li>Set GOOGLE_CLIENT_ID/SECRET and GITHUB_CLIENT_ID/SECRET in .env</li>
         <li>
-          Create an OAuth app. Add redirect URI(s) — must match{" "}
-          <code className="text-[10px]">OAUTH_REDIRECT_BASE_URL</code> in{" "}
-          <code className="text-[10px]">.env</code>:
-          <div className="mt-1 space-y-0.5 font-mono text-[10px] text-foreground/80">
-            <div>{origin}/auth/oauth/callback/google</div>
-            <div>{origin}/auth/oauth/callback/github</div>
-          </div>
+          Set <code className="font-mono text-[10px]">OAUTH_REDIRECT_BASE_URL={base}</code> and include both origins in{" "}
+          <code className="font-mono text-[10px]">CORS_ORIGINS</code>
         </li>
-        <li>
-          Paste into <code className="text-[10px]">.env</code> (both ID <em>and</em> secret for each
-          provider):
-          <div className="mt-1 font-mono text-[10px] text-foreground/80">
-            GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
-            <br />
-            GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET
-            <br />
-            OAUTH_REDIRECT_BASE_URL={origin}
-          </div>
-        </li>
-        <li>Restart the server, then refresh this page.</li>
       </ol>
     </div>
   );
@@ -98,35 +75,28 @@ export function AuthOAuth({ inviteToken }: Props) {
   const { data: product } = useProduct();
   const configured = new Set(product?.oauth_providers ?? []);
   const inviteQuery = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
+  const isDev = import.meta.env.DEV;
 
   return (
     <>
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-[var(--auth-card-bg)] px-3 text-muted-foreground">or continue with</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 max-sm:grid-cols-1 sm:grid-cols-2">
         {PROVIDERS.map(({ id, label }) => {
           const isOn = configured.has(id);
           const icon = id === "google" ? <GoogleIcon /> : <GitHubIcon />;
           return isOn ? (
-            <Button key={id} variant="outline" className="auth-oauth-btn" asChild>
+            <Button key={id} variant="outline" className="auth-oauth-btn w-full" asChild>
               <a href={`${oauthUrl(id)}${inviteQuery}`}>
                 {icon}
-                {label}
+                Continue with {label}
               </a>
             </Button>
           ) : (
             <Button
               key={id}
               variant="outline"
-              className="auth-oauth-btn"
+              className="auth-oauth-btn w-full"
               disabled
-              title={`Set ${id.toUpperCase()}_CLIENT_ID and ${id.toUpperCase()}_CLIENT_SECRET in .env`}
+              aria-describedby={`oauth-${id}-hint`}
             >
               {icon}
               {label}
@@ -134,7 +104,12 @@ export function AuthOAuth({ inviteToken }: Props) {
           );
         })}
       </div>
-      {!configured.size && <OAuthSetupHint />}
+      {!configured.size && isDev && <OAuthSetupHint />}
+      {!configured.size && !isDev && (
+        <p id="oauth-google-hint" className="mt-2 text-center text-xs text-muted-foreground">
+          Social sign-in is not configured on this deployment.
+        </p>
+      )}
     </>
   );
 }

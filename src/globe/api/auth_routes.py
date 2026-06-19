@@ -7,10 +7,14 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr, Field
 
 from globe.auth.oauth import (
+    OAuthError,
     exchange_github_code,
     exchange_google_code,
     github_authorize_url,
     google_authorize_url,
+    oauth_login_error_url,
+    oauth_redirect_base,
+    oauth_redirect_uri,
     parse_oauth_state,
 )
 from globe.auth.tokens import create_access_token, create_email_token, decode_email_token
@@ -185,46 +189,77 @@ def build_auth_router() -> APIRouter:
         state: Optional[str] = None,
         error: Optional[str] = None,
     ) -> RedirectResponse:
+        if provider not in ("google", "github"):
+            return RedirectResponse(
+                oauth_login_error_url(provider, "unknown_provider", request), status_code=302
+            )
+
         if error:
-            raise HTTPException(status_code=400, detail=error)
+            err_code = "access_denied" if error == "access_denied" else "provider_error"
+            return RedirectResponse(oauth_login_error_url(provider, err_code, request), status_code=302)
         if not code:
-            raise HTTPException(status_code=400, detail="Missing authorization code")
-        state_data = parse_oauth_state(state, provider)
-        settings = get_settings()
-        store = _get_store(request)
+            return RedirectResponse(oauth_login_error_url(provider, "missing_code", request), status_code=302)
 
-        if provider == "google":
-            provider_user_id, email, name = await exchange_google_code(request, code)
-        elif provider == "github":
-            provider_user_id, email, name = await exchange_github_code(request, code)
-        else:
-            raise HTTPException(status_code=404, detail="Unknown provider")
+        redirect_base: str | None = None
+        try:
+            state_data = parse_oauth_state(state, provider)
+            redirect_base = state_data.get("r") or oauth_redirect_base(request)
+            settings = get_settings()
+            store = _get_store(request)
 
-        if not provider_user_id:
-            raise HTTPException(status_code=400, detail="OAuth profile missing user id")
+            if provider == "google":
+                provider_user_id, email, name = await exchange_google_code(
+                    request, code, redirect_base=redirect_base
+                )
+            else:
+                provider_user_id, email, name = await exchange_github_code(
+                    request, code, redirect_base=redirect_base
+                )
 
-        invite = (state_data.get("i") or "").strip() or None
-        user = store.get_or_create_oauth_user(
-            provider, provider_user_id, email, name, invite_token=invite or None
-        )
-        refresh = store.issue_refresh_token(user.id, settings.jwt_refresh_days)
-        access = create_access_token(
-            user.id, user.email, org_id=user.org_id, role=user.org_role
-        )
+            if not provider_user_id:
+                return RedirectResponse(
+                    oauth_login_error_url(provider, "missing_profile", request), status_code=302
+                )
 
-        frontend = settings.oauth_redirect_base_url.rstrip("/")
-        redirect = RedirectResponse(url=f"{frontend}/auth/callback", status_code=302)
-        _set_refresh_cookie(redirect, refresh)
-        redirect.set_cookie(
-            key=ACCESS_COOKIE,
-            value=access,
-            httponly=True,
-            secure=frontend.startswith("https"),
-            samesite="lax",
-            max_age=settings.jwt_access_minutes * 60,
-            path="/",
-        )
-        return redirect
+            invite = (state_data.get("i") or "").strip() or None
+            user = store.get_or_create_oauth_user(
+                provider, provider_user_id, email, name, invite_token=invite or None
+            )
+            refresh = store.issue_refresh_token(user.id, settings.jwt_refresh_days)
+            access = create_access_token(
+                user.id, user.email, org_id=user.org_id, role=user.org_role
+            )
+
+            frontend = redirect_base or oauth_redirect_base(request)
+            redirect = RedirectResponse(url=f"{frontend.rstrip('/')}/auth/callback", status_code=302)
+            _set_refresh_cookie(redirect, refresh)
+            redirect.set_cookie(
+                key=ACCESS_COOKIE,
+                value=access,
+                httponly=True,
+                secure=frontend.startswith("https"),
+                samesite="lax",
+                max_age=settings.jwt_access_minutes * 60,
+                path="/",
+            )
+            return redirect
+        except OAuthError as exc:
+            rid = oauth_redirect_uri(provider, redirect_base) if exc.code == "redirect_mismatch" else None
+            return RedirectResponse(
+                oauth_login_error_url(provider, exc.code, request, redirect_uri=rid),
+                status_code=302,
+            )
+        except HTTPException as exc:
+            detail = exc.detail if isinstance(exc.detail, str) else "provider_error"
+            code_key = detail if detail in (
+                "invalid_state", "redirect_mismatch", "invalid_client", "invalid_grant",
+                "missing_email", "access_denied", "provider_error",
+            ) else "provider_error"
+            rid = oauth_redirect_uri(provider, redirect_base) if code_key == "redirect_mismatch" else None
+            return RedirectResponse(
+                oauth_login_error_url(provider, code_key, request, redirect_uri=rid),
+                status_code=302,
+            )
 
     @router.get("/oauth/complete", response_model=AuthResponse)
     async def oauth_complete(request: Request, response: Response) -> AuthResponse:

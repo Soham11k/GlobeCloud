@@ -3,6 +3,7 @@ import { useConsole } from "../ConsoleContext";
 import { useKnowledge } from "@/lib/hooks";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LoadingState } from "@/components/layout/LoadingState";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Panel, Field, Chip } from "../components/ui";
 import {
   Select,
@@ -46,7 +47,10 @@ export function DocsPage() {
       {isLoading ? (
         <LoadingState rows={4} />
       ) : !docs.length ? (
-        <p className="text-sm text-muted-foreground">No knowledge docs in {region}.</p>
+        <EmptyState
+          title="No knowledge docs"
+          description={`No documents indexed in ${region}. Import seed/catalog.json or add docs via replication.`}
+        />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
           <nav className="console-panel space-y-1 p-2">

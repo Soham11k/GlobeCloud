@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormField } from "@/components/layout/FormField";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { login } from "@/lib/auth";
+import { oauthErrorMessage } from "@/lib/oauthErrors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -10,19 +15,28 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = params.get("next") || "/app";
+  const oauthError = params.get("oauth_error");
+  const oauthProvider = params.get("provider");
+  const oauthRedirectUri = params.get("redirect_uri");
+  const signupQs = new URLSearchParams();
+  if (next !== "/app") signupQs.set("next", next);
+  const signupLink = signupQs.toString() ? `/signup?${signupQs}` : "/signup";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     setLoading(true);
     try {
       await login(email, password);
       toast.success("Signed in");
       navigate(next, { replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Login failed");
+      setFormError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
@@ -34,10 +48,19 @@ export function LoginPage() {
       title="Welcome back"
       subtitle="Sign in to access write controls."
       showOAuth
+      header={
+        oauthError ? (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>
+              {oauthErrorMessage(oauthError, oauthProvider, oauthRedirectUri)}
+            </AlertDescription>
+          </Alert>
+        ) : null
+      }
       footer={
         <p className="mt-8 text-center text-sm text-muted-foreground">
           No account?{" "}
-          <Link to="/signup" className="text-accent hover:underline">
+          <Link to={signupLink} className="text-accent hover:underline">
             Create one
           </Link>
           {" · "}
@@ -47,37 +70,53 @@ export function LoginPage() {
         </p>
       }
     >
-      <form onSubmit={submit} className="space-y-5">
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Email</label>
+      <form onSubmit={submit} className="space-y-5" aria-busy={loading}>
+        {formError && (
+          <Alert variant="destructive">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        <FormField id="login-email" label="Email">
           <Input
+            id="login-email"
             type="email"
             required
+            autoFocus
             autoComplete="email"
             placeholder="you@company.com"
             className="auth-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-muted-foreground">Password</label>
-            <Link to="/forgot-password" className="text-xs text-accent hover:underline">
-              Forgot?
-            </Link>
-          </div>
-          <Input
-            type="password"
+        </FormField>
+        <FormField
+          id="login-password"
+          label={
+            <span className="flex w-full items-center justify-between">
+              Password
+              <Link to="/forgot-password" className="text-xs text-accent hover:underline">
+                Forgot?
+              </Link>
+            </span>
+          }
+        >
+          <PasswordInput
+            id="login-password"
             required
             autoComplete="current-password"
-            className="auth-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-        </div>
-        <Button type="submit" variant="outline" className="auth-submit-btn w-full" disabled={loading}>
-          {loading ? "Signing in…" : "Sign in"}
+        </FormField>
+        <Button type="submit" className="h-11 w-full" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Signing in…
+            </>
+          ) : (
+            "Sign in"
+          )}
         </Button>
       </form>
     </AuthLayout>

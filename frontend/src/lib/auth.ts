@@ -13,6 +13,34 @@ export type AuthUser = {
   org_role?: string;
 };
 
+export class AuthError extends Error {
+  code: string;
+
+  constructor(message: string, code = "auth_error") {
+    super(message);
+    this.name = "AuthError";
+    this.code = code;
+  }
+}
+
+type ValidationItem = { msg?: string; loc?: (string | number)[] };
+
+export function parseApiError(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") return fallback;
+  const detail = (body as { detail?: unknown }).detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0] as ValidationItem;
+    if (typeof first?.msg === "string") return first.msg;
+  }
+  return fallback;
+}
+
+async function throwAuthError(res: Response, fallback: string): Promise<never> {
+  const body = await res.json().catch(() => ({}));
+  throw new AuthError(parseApiError(body, fallback), String(res.status));
+}
+
 export function hydrateAuthFromStorage(): void {
   if (accessToken) return;
   const stored = sessionStorage.getItem(TOKEN_KEY);
@@ -48,10 +76,7 @@ export async function login(email: string, password: string): Promise<AuthUser> 
     credentials: "include",
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error(typeof detail.detail === "string" ? detail.detail : "Login failed");
-  }
+  if (!res.ok) await throwAuthError(res, "Login failed");
   const data = await res.json();
   persistSession(data);
   return data.user;
@@ -74,10 +99,7 @@ export async function register(
       invite_token: inviteToken || "",
     }),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error(typeof detail.detail === "string" ? detail.detail : "Registration failed");
-  }
+  if (!res.ok) await throwAuthError(res, "Registration failed");
   const data = await res.json();
   persistSession(data);
   return data.user;
@@ -134,10 +156,7 @@ export async function forgotPassword(email: string): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error(typeof detail.detail === "string" ? detail.detail : "Request failed");
-  }
+  if (!res.ok) await throwAuthError(res, "Request failed");
 }
 
 export async function verifyEmail(token: string): Promise<void> {
@@ -146,10 +165,7 @@ export async function verifyEmail(token: string): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error(typeof detail.detail === "string" ? detail.detail : "Verification failed");
-  }
+  if (!res.ok) await throwAuthError(res, "Verification failed");
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {
@@ -158,10 +174,7 @@ export async function resetPassword(token: string, password: string): Promise<vo
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, password }),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error(typeof detail.detail === "string" ? detail.detail : "Reset failed");
-  }
+  if (!res.ok) await throwAuthError(res, "Reset failed");
 }
 
 export function oauthUrl(provider: "google" | "github"): string {

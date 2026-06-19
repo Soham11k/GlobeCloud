@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormField } from "@/components/layout/FormField";
+import { PasswordInput, PasswordStrength } from "@/components/auth/PasswordInput";
 import { register } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,23 +14,28 @@ export function SignupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("invite") || undefined;
+  const next = searchParams.get("next");
+  const loginQs = new URLSearchParams();
+  if (inviteToken) loginQs.set("invite", inviteToken);
+  if (next) loginQs.set("next", next);
+  const loginLink = loginQs.toString() ? `/login?${loginQs}` : "/login";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const strength =
-    password.length >= 12 ? "strong" : password.length >= 8 ? "good" : password.length > 0 ? "weak" : "";
+  const [formError, setFormError] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     setLoading(true);
     try {
       await register(email, password, name, inviteToken);
       toast.success("Account created");
-      navigate("/app", { replace: true });
+      navigate(next || "/app", { replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Registration failed");
+      setFormError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -46,53 +55,61 @@ export function SignupPage() {
       footer={
         <p className="mt-8 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/login" className="text-accent hover:underline">
+          <Link to={loginLink} className="text-accent hover:underline">
             Sign in
           </Link>
         </p>
       }
     >
-      <form onSubmit={submit} className="space-y-5">
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Name</label>
+      <form onSubmit={submit} className="space-y-5" aria-busy={loading}>
+        {formError && (
+          <Alert variant="destructive">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        <FormField id="signup-name" label="Name">
           <Input
+            id="signup-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
             placeholder="Your name"
             className="auth-input"
           />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Email</label>
+        </FormField>
+        <FormField id="signup-email" label="Email">
           <Input
+            id="signup-email"
             type="email"
             required
+            autoFocus
+            autoComplete="email"
             placeholder="you@company.com"
             className="auth-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Password</label>
-          <Input
-            type="password"
+        </FormField>
+        <FormField id="signup-password" label="Password" hint="At least 8 characters">
+          <PasswordInput
+            id="signup-password"
             required
             minLength={8}
-            className="auth-input"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {strength && (
-            <p className={`text-xs ${strength === "weak" ? "text-warning" : "text-muted-foreground"}`}>
-              {strength === "weak" && "Use at least 8 characters"}
-              {strength === "good" && "Good password"}
-              {strength === "strong" && "Strong password"}
-            </p>
+          <PasswordStrength password={password} />
+        </FormField>
+        <Button type="submit" className="h-11 w-full" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Creating…
+            </>
+          ) : (
+            "Create account"
           )}
-        </div>
-        <Button type="submit" variant="outline" className="auth-submit-btn w-full" disabled={loading}>
-          {loading ? "Creating…" : "Create account"}
         </Button>
       </form>
     </AuthLayout>

@@ -9,6 +9,7 @@ import { startCheckout, openBillingPortal } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KpiSkeleton } from "@/components/layout/LoadingState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { cn } from "@/lib/utils";
 
 const PLANS = [
@@ -32,7 +33,7 @@ const PLANS = [
 export function BillingPage() {
   const [params, setParams] = useSearchParams();
   const qc = useQueryClient();
-  const { data: status, isLoading } = useBillingStatus();
+  const { data: status, isLoading, isError, refetch } = useBillingStatus();
 
   useEffect(() => {
     if (params.get("success") === "1") {
@@ -81,6 +82,12 @@ export function BillingPage() {
 
       {isLoading ? (
         <KpiSkeleton count={1} />
+      ) : isError ? (
+        <ErrorState
+          title="Billing status unavailable"
+          description="Could not load subscription details."
+          onRetry={() => refetch()}
+        />
       ) : (
         <div className="console-panel p-6">
           <h2 className="text-base font-medium">Current plan</h2>
@@ -103,7 +110,13 @@ export function BillingPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {PLANS.map((plan) => {
+        {isLoading ? (
+          <>
+            <KpiSkeleton count={1} />
+            <KpiSkeleton count={1} />
+          </>
+        ) : (
+        PLANS.map((plan) => {
           const isCurrent = currentTier === plan.id && isActive;
           return (
             <div
@@ -140,7 +153,8 @@ export function BillingPage() {
               </Button>
             </div>
           );
-        })}
+        })
+        )}
       </div>
 
       <p className="text-xs text-muted-foreground">

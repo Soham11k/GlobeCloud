@@ -20,6 +20,7 @@ from globe.api.gateway_routes import build_gateway_peers, build_gateway_router
 from globe.api.middleware import LoggingMiddleware, RateLimitMiddleware
 from globe.api.routes import build_api_router
 from globe.config import get_settings
+from globe.auth.oauth import warn_oauth_redirect_host
 from globe.db import PlatformStore, PostgresCluster, init_db
 from globe.database.sync import ReplicationEngine
 from globe.gateway.proxy import GatewayProxy
@@ -145,6 +146,7 @@ async def _gateway_metrics_loop(router: GeoRouter, observ: ObservabilityStore) -
 def create_app() -> FastAPI:
     settings = get_settings()
     init_sentry()
+    warn_oauth_redirect_host()
 
     app = FastAPI(
         title=settings.product_name,

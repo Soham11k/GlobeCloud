@@ -130,6 +130,12 @@
   .auth-input:focus-visible {
     border-color: rgba(91, 82, 255, 0.5);
   }
+  .auth-input-error {
+    border-color: rgba(248, 113, 113, 0.6) !important;
+  }
+  .auth-input-error:focus-visible {
+    border-color: rgba(248, 113, 113, 0.8) !important;
+  }
   .auth-submit-btn {
     height: 2.75rem;
     border-radius: 0.625rem;
@@ -217,4 +223,13 @@
   .geo-healthy { color: var(--geo-healthy); }
   .geo-warn { color: var(--geo-warn); }
   .geo-error { color: var(--geo-error); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

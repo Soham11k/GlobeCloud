@@ -10,7 +10,8 @@ import {
 } from "@/lib/hooks";
 import { useConsole } from "../ConsoleContext";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { KpiSkeleton } from "@/components/layout/LoadingState";
+import { KpiSkeleton, LoadingState } from "@/components/layout/LoadingState";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Panel, Kpi } from "../components/ui";
 import { RegionProbeCard } from "../components/RegionProbeCard";
 import { ActivityTimeline } from "../components/ActivityTimeline";
@@ -53,6 +54,9 @@ export function OverviewPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="console-panel overflow-hidden lg:col-span-2">
+          {loading ? (
+            <LoadingState rows={6} className="min-h-[320px]" />
+          ) : (
           <GeoVizPanel
             className="w-full rounded-none border-0"
             height="min(420px, 52vh)"
@@ -66,6 +70,7 @@ export function OverviewPage() {
             interactive
             showMapInset
           />
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -117,9 +122,11 @@ export function OverviewPage() {
               />
             ))
           ) : (
-            <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
-              No probe data — server warming up
-            </p>
+            <EmptyState
+              title="No probe data"
+              description="Regional health probes will appear once the server finishes warming up."
+              className="sm:col-span-2 lg:col-span-3"
+            />
           )}
         </div>
       </div>

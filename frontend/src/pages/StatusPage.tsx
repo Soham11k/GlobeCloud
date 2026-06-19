@@ -16,6 +16,7 @@ import {
   useRegions,
   useGlobalStatus,
 } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 
 function LiveMs({ value }: { value: number | null | undefined }) {
   if (value == null) return <span className="tabular-nums text-muted-foreground">—</span>;
@@ -27,40 +28,68 @@ function LiveMs({ value }: { value: number | null | undefined }) {
 }
 
 function UptimeBar({ samples }: { samples: { value: number; ts: string }[] }) {
-  const slots = 90;
+  const slotsDesktop = 90;
+  const slotsMobile = 36;
   const hasData = samples.length >= 3;
 
-  if (!hasData) {
+  const renderBar = (slots: number, mobile: boolean) => {
+    if (!hasData) {
+      return (
+        <div
+          className={cn("flex h-8 gap-0.5", mobile && "min-w-max")}
+          role="img"
+          aria-label="Uptime history loading"
+        >
+          {[...Array(slots)].map((_, i) => (
+            <div
+              key={i}
+              className={cn("rounded-sm bg-muted", mobile ? "h-8 w-2 shrink-0" : "min-w-[2px] flex-1")}
+              style={{ opacity: 0.35 + (i % 5) * 0.06 }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    const recent = samples.slice(-slots);
+    const padded = [...Array(Math.max(0, slots - recent.length)).fill(null), ...recent];
+
     return (
-      <div className="flex h-8 gap-0.5">
-        {[...Array(slots)].map((_, i) => (
-          <div
-            key={i}
-            className="min-w-[2px] flex-1 rounded-sm bg-muted"
-            style={{ opacity: 0.35 + (i % 5) * 0.06 }}
-          />
-        ))}
+      <div
+        className={cn("flex h-8 gap-0.5", mobile && "min-w-max")}
+        role="list"
+        aria-label="Latency uptime by sample"
+      >
+        {padded.map((s, i) => {
+          const healthy = s && s.value < 500;
+          const label = s
+            ? `Sample ${i + 1}: ${Math.round(s.value)} ms, ${healthy ? "healthy" : "degraded"}`
+            : `Sample ${i + 1}: no data`;
+          return (
+            <div
+              key={i}
+              role="listitem"
+              aria-label={label}
+              className={cn("rounded-sm", mobile ? "h-8 w-2 shrink-0" : "min-w-[2px] flex-1")}
+              style={{
+                backgroundColor: healthy ? "var(--geo-healthy)" : s ? "var(--geo-warn)" : "var(--muted)",
+                opacity: s ? 0.85 : 0.2,
+              }}
+              title={s ? `${Math.round(s.value)} ms` : undefined}
+            />
+          );
+        })}
       </div>
     );
-  }
-
-  const recent = samples.slice(-slots);
-  const padded = [...Array(Math.max(0, slots - recent.length)).fill(null), ...recent];
+  };
 
   return (
-    <div className="flex h-8 gap-0.5">
-      {padded.map((s, i) => (
-        <div
-          key={i}
-          className="min-w-[2px] flex-1 rounded-sm"
-          style={{
-            backgroundColor: s && s.value < 500 ? "var(--geo-healthy)" : s ? "var(--geo-warn)" : "var(--muted)",
-            opacity: s ? 0.85 : 0.2,
-          }}
-          title={s ? `${Math.round(s.value)} ms` : undefined}
-        />
-      ))}
-    </div>
+    <>
+      <div className="overflow-x-auto sm:hidden" tabIndex={0} aria-label="Scroll uptime history">
+        {renderBar(slotsMobile, true)}
+      </div>
+      <div className="hidden sm:block">{renderBar(slotsDesktop, false)}</div>
+    </>
   );
 }
 

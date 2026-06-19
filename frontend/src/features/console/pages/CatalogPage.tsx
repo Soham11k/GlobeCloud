@@ -3,6 +3,7 @@ import { useConsole } from "../ConsoleContext";
 import { useProducts, useOrders, useOrderMutation } from "@/lib/hooks";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LoadingState } from "@/components/layout/LoadingState";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Panel, DataTable, Chip, Field } from "../components/ui";
 import { tierFromProduct, PlanIcon } from "@/components/brand/PlanIcon";
 import { Button } from "@/components/ui/button";
@@ -21,8 +22,8 @@ export function CatalogPage() {
   const { region, setRegion, regionIds } = useConsole();
   const [view, setView] = useState<"products" | "orders">("products");
   const [search, setSearch] = useState("");
-  const { data: products, isLoading } = useProducts(region);
-  const { data: orders } = useOrders(region);
+  const { data: products, isLoading, isError, refetch } = useProducts(region);
+  const { data: orders, isLoading: ordersLoading } = useOrders(region);
   const orderMut = useOrderMutation();
 
   const filtered =
@@ -75,6 +76,9 @@ export function CatalogPage() {
 
       {view === "orders" ? (
         <Panel title={`Orders · ${region}`}>
+          {ordersLoading ? (
+            <LoadingState rows={3} />
+          ) : (
           <DataTable
             headers={["ID", "Product", "SKU", "Qty", "Created"]}
             empty="No orders in this region"
@@ -86,6 +90,7 @@ export function CatalogPage() {
               new Date(o.created_at).toLocaleString(),
             ])}
           />
+          )}
         </Panel>
       ) : (
         <>
@@ -97,6 +102,21 @@ export function CatalogPage() {
           />
           {isLoading ? (
             <LoadingState rows={4} />
+          ) : isError ? (
+            <EmptyState
+              title="Catalog unavailable"
+              description="Could not load products for this region."
+              action={
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              }
+            />
+          ) : !filtered.length ? (
+            <EmptyState
+              title={search ? "No matching products" : "No products in catalog"}
+              description={search ? "Try a different search term or clear the filter." : "Seed catalog.json or enable demo data."}
+            />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((p) => {

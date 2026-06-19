@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouteMutation, useRegions, useLiveMetrics } from "@/lib/hooks";
 import { useConsole } from "../ConsoleContext";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Panel, DataTable, Chip, Field } from "../components/ui";
 import { CodeBlock } from "../components/CodeBlock";
 import { GeoVizPanel } from "@/components/globe/GeoVizPanel";
@@ -24,6 +25,7 @@ export function RoutePage() {
   const [lat, setLat] = useState(String(client.lat));
   const [lon, setLon] = useState(String(client.lon));
   const [preferred, setPreferred] = useState("");
+  const [geoError, setGeoError] = useState("");
 
   const probes = route.data?.probes ?? liveMetrics?.router ?? regions?.regions.map((r) => ({ region_id: r.id, healthy: true }));
   const latencies = Object.fromEntries(
@@ -114,21 +116,37 @@ export function RoutePage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() =>
-                  navigator.geolocation?.getCurrentPosition((p) => {
-                    setLat(p.coords.latitude.toFixed(4));
-                    setLon(p.coords.longitude.toFixed(4));
-                  })
-                }
+                onClick={() => {
+                  setGeoError("");
+                  if (!navigator.geolocation) {
+                    setGeoError("Geolocation is not available in this browser.");
+                    return;
+                  }
+                  navigator.geolocation.getCurrentPosition(
+                    (p) => {
+                      setLat(p.coords.latitude.toFixed(4));
+                      setLon(p.coords.longitude.toFixed(4));
+                    },
+                    () => setGeoError("Location permission denied or unavailable."),
+                  );
+                }}
               >
                 Use geolocation
               </Button>
             </div>
+            {geoError && <p className="text-xs text-[var(--geo-error)]">{geoError}</p>}
           </div>
         </Panel>
 
         <CodeBlock code={curlExample} language="curl" />
       </div>
+
+      {!route.data && !route.isPending && (
+        <EmptyState
+          title="Run a route probe"
+          description="Enter coordinates or use geolocation, then click Run route to see latency-ranked regional backends."
+        />
+      )}
 
       {route.data && (
         <div className="grid gap-6 lg:grid-cols-2">
