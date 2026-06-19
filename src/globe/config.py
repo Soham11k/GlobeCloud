@@ -4,7 +4,7 @@ from typing import Dict
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from globe.db.url import normalize_database_url
+from globe.database_url import normalize_database_url
 
 
 def parse_peer_urls(raw: str) -> Dict[str, str]:

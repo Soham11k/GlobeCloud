@@ -34,10 +34,36 @@ jobs:
           npm run build
 
       - name: Smoke test (local)
+        env:
+          DATABASE_URL: sqlite:///./data/globe_smoke.db
+          REGIONAL_DATABASE_URL: sqlite:///./data/globe_smoke.db
+          ENVIRONMENT: development
+          AUTH_REQUIRED: "false"
+          GLOBE_PUBLIC_READ: "true"
+          SEED_DEMO_DATA: "true"
         run: |
+          mkdir -p data
           nohup globe > /tmp/globe.log 2>&1 &
-          sleep 4
-          ./scripts/smoke-test.sh
+          GLOBE_PID=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8000/api/v1/health >/dev/null 2>&1; then
+              break
+            fi
+            if ! kill -0 "$GLOBE_PID" 2>/dev/null; then
+              echo "globe process exited early"
+              cat /tmp/globe.log
+              exit 1
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8000/api/v1/health >/dev/null || {
+            cat /tmp/globe.log
+            exit 1
+          }
+          ./scripts/smoke-test.sh || {
+            cat /tmp/globe.log
+            exit 1
+          }
 
   deploy:
     needs: build-and-test

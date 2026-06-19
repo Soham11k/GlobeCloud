@@ -1,4 +1,4 @@
-from globe.db.url import normalize_database_url
+from globe.database_url import normalize_database_url
 
 
 def test_supabase_postgres_uri_gets_psycopg_and_ssl():

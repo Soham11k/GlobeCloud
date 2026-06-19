@@ -95,6 +95,8 @@ async def require_api_access(
         return
 
     settings = get_settings()
+    if not settings.auth_enabled:
+        return
     if settings.globe_public_read and _is_public_get(path, request.method):
         return
     if _is_ops_health_check(path, request.method):
