@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from globe.database.models import REGIONS
 from globe.database.peer import PeerClient
 from globe.db.regional_database import RegionalPostgresDatabase
+
+logger = logging.getLogger(__name__)
 
 
 class PostgresCluster:
@@ -174,7 +177,14 @@ class PostgresCluster:
             if self.is_local(region_id):
                 source = self.get(region_id).list_knowledge(org)
             else:
-                source = await self.peers[region_id].list_knowledge()
+                peer = self.peers.get(region_id)
+                if not peer:
+                    continue
+                try:
+                    source = await peer.list_knowledge()
+                except Exception as exc:
+                    logger.warning("Peer %s knowledge unavailable: %s", region_id, exc)
+                    source = []
             for doc in source:
                 if doc["id"] not in seen:
                     seen.add(doc["id"])

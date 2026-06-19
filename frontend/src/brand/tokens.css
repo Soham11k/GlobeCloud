@@ -1,16 +1,28 @@
 :root {
   --section-max: 72rem;
+  --content-max: 80rem;
+  --sidebar-width: 15.5rem;
+  --sidebar-width-collapsed: 4rem;
+  --header-height: 3.5rem;
   --accent: #5b52ff;
   --accent-muted: rgba(91, 82, 255, 0.12);
   --accent-glow: rgba(91, 82, 255, 0.35);
-  --surface-0: #03030a;
-  --surface-1: #0a0a12;
-  --surface-2: #111118;
+  --space-bg: #03030a;
+  --space-vignette: rgba(3, 3, 10, 0.92);
+  --glass-bg: rgba(9, 9, 11, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glow-accent: 0 0 40px rgba(91, 82, 255, 0.25);
+  --geo-healthy: #2dd4a0;
+  --geo-warn: #f0a84a;
+  --geo-error: #f87171;
+  --surface-0: #09090b;
+  --surface-1: #18181b;
+  --surface-2: #27272a;
   --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
   --shadow-elevated-dark: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.35);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --tier-starter: #5b52ff;
-  --tier-pro: #2dd4a0;
+  --tier-pro: #22c55e;
   --tier-enterprise: #18181b;
   --tier-addon: #71717a;
 }

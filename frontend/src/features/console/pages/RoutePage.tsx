@@ -1,17 +1,37 @@
 import { useState } from "react";
-import { useRouteMutation, useRegions } from "@/lib/hooks";
+import { useRouteMutation, useRegions, useLiveMetrics } from "@/lib/hooks";
 import { useConsole } from "../ConsoleContext";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Panel, DataTable, Chip, Field } from "../components/ui";
-import { GlobeMap } from "@/components/GlobeMap";
+import { GlobeScenePanel } from "@/components/globe/GlobeScenePanel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 export function RoutePage() {
-  const { setRegion, setClient, client } = useConsole();
+  const { setRegion, setClient, client, region } = useConsole();
   const { data: regions } = useRegions();
+  const { data: liveMetrics } = useLiveMetrics();
   const route = useRouteMutation();
   const [lat, setLat] = useState(String(client.lat));
   const [lon, setLon] = useState(String(client.lon));
   const [preferred, setPreferred] = useState("");
+
+  const probes = route.data?.probes ?? liveMetrics?.router ?? regions?.regions.map((r) => ({ region_id: r.id, healthy: true }));
+  const latencies = Object.fromEntries(
+    (probes ?? [])
+      .filter((p) => "latency_ms" in p && p.latency_ms != null)
+      .map((p) => [p.region_id, (p as { latency_ms: number }).latency_ms])
+  );
+  const healthy = Object.fromEntries((probes ?? []).map((p) => [p.region_id, p.healthy]));
+  const selectedRegion = route.data?.selected_region ?? region;
 
   const run = () => {
     const latN = parseFloat(lat);
@@ -30,50 +50,60 @@ export function RoutePage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">Geo routing</h1>
-        <p className="console-mono mt-1 text-[var(--gc-dim)]">GET /api/v1/route — latency probes + circuit state</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Geo routing"
+        description="Latency probes and circuit state pick the best regional backend for each request."
+      />
 
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Probe map">
-          <GlobeMap
-            selected={route.data?.selected_region}
-            probes={route.data?.probes ?? regions?.regions.map((r) => ({ region_id: r.id, healthy: true }))}
+          <GlobeScenePanel
+            className="w-full"
+            height="16rem"
             regions={regions?.regions}
-            client={{ lat: parseFloat(lat) || 0, lon: parseFloat(lon) || 0 }}
-            showArc={!!route.data}
-            className="w-full h-64"
+            latencies={latencies}
+            healthy={healthy}
+            variant="panel"
+            client={client}
+            selected={selectedRegion}
+            showArc
+            interactive
           />
         </Panel>
 
-        <div className="space-y-4">
-          <Panel title="Request">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="client_lat">
-                  <input className="console-input" type="number" step="0.01" value={lat} onChange={(e) => setLat(e.target.value)} />
+        <div className="space-y-6">
+          <Panel title="Route request">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Latitude">
+                  <Input type="number" step="0.01" value={lat} onChange={(e) => setLat(e.target.value)} />
                 </Field>
-                <Field label="client_lon">
-                  <input className="console-input" type="number" step="0.01" value={lon} onChange={(e) => setLon(e.target.value)} />
+                <Field label="Longitude">
+                  <Input type="number" step="0.01" value={lon} onChange={(e) => setLon(e.target.value)} />
                 </Field>
               </div>
-              <Field label="preferred_region">
-                <select className="console-input" value={preferred} onChange={(e) => setPreferred(e.target.value)}>
-                  <option value="">auto — lowest latency</option>
-                  {(regions?.regions ?? []).map((r) => (
-                    <option key={r.id} value={r.id}>{r.id}</option>
-                  ))}
-                </select>
+              <Field label="Preferred region">
+                <Select value={preferred || "__auto"} onValueChange={(v) => setPreferred(v === "__auto" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Auto — lowest latency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__auto">Auto — lowest latency</SelectItem>
+                    {(regions?.regions ?? []).map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="console-btn console-btn-primary" onClick={run} disabled={route.isPending}>
-                  {route.isPending ? "Probing…" : "Route"}
-                </button>
-                <button
-                  type="button"
-                  className="console-btn"
+                <Button onClick={run} disabled={route.isPending}>
+                  {route.isPending ? "Probing…" : "Route request"}
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() =>
                     navigator.geolocation?.getCurrentPosition((p) => {
                       setLat(p.coords.latitude.toFixed(4));
@@ -82,25 +112,25 @@ export function RoutePage() {
                   }
                 >
                   Use my location
-                </button>
+                </Button>
               </div>
             </div>
           </Panel>
 
           {route.data && (
             <Panel title="Selection">
-              <p className="console-mono text-sm mb-3">
+              <p className="text-sm mb-4">
                 {route.data.selected_name}{" "}
                 <Chip variant="ok">{route.data.selected_region}</Chip>
                 {route.data.is_local && <Chip className="ml-1">local</Chip>}
               </p>
               <DataTable
-                headers={["region", "ms", "circuit", "error", "peer"]}
+                headers={["Region", "ms", "Probe", "Circuit", "Peer"]}
                 rows={route.data.probes.map((p) => [
                   p.region_id,
                   p.latency_ms ?? "—",
+                  p.probe_mode ?? "—",
                   p.circuit ?? "—",
-                  p.error_rate != null ? `${(p.error_rate * 100).toFixed(0)}%` : "—",
                   p.peer_url ?? (p.is_local ? "local" : "—"),
                 ])}
               />

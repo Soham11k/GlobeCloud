@@ -27,6 +27,7 @@ class RegionHealth:
     error_rate: float
     is_local: bool = False
     peer_url: Optional[str] = None
+    probe_mode: str = "estimated"
 
 
 @dataclass
@@ -67,15 +68,19 @@ class GeoRouter:
         if self.deployment_mode == "regional" and region.id == self.local_region_id:
             latency = 5.0
             failed = False
+            probe_mode = "local"
         elif peer is not None:
             healthy, latency = await peer.probe_health()
             failed = not healthy
+            probe_mode = "http"
         elif settings.is_development and self.deployment_mode != "gateway":
             latency = region.base_latency_ms
             failed = False
+            probe_mode = "estimated"
         else:
             latency = float("inf")
             failed = True
+            probe_mode = "unavailable"
 
         async with self._lock:
             if failed:
@@ -99,6 +104,7 @@ class GeoRouter:
                 ),
                 is_local=is_local,
                 peer_url=self._peer_url(region.id),
+                probe_mode=probe_mode,
             )
             self._health[region.id] = health
             return health
@@ -144,3 +150,12 @@ class GeoRouter:
 
     def snapshot(self) -> list[RegionHealth]:
         return list(self._health.values())
+
+    async def refresh_probes(
+        self, client_lat: float = 40.71, client_lon: float = -74.01
+    ) -> list[RegionHealth]:
+        """Re-run health probes for all regions (updates snapshot used by /metrics)."""
+        await asyncio.gather(
+            *(self.probe_region(region, client_lat, client_lon) for region in REGIONS)
+        )
+        return self.snapshot()

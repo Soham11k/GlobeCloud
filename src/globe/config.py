@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     seed_demo_data: bool = False
     catalog_seed_file: str = "seed/catalog.json"
 
+    # Allow public GET on read-only /api/v1 routes in production (local demos / marketing)
+    globe_public_read: bool = False
+
     @property
     def is_production(self) -> bool:
         return self.environment.strip().lower() == "production"
@@ -152,6 +155,8 @@ class Settings(BaseSettings):
 
     @property
     def guest_read_enabled(self) -> bool:
+        if self.globe_public_read:
+            return True
         return not self.is_production and self.user_auth_required
 
     @property

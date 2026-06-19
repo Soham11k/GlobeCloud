@@ -74,3 +74,27 @@ def decode_email_token(token: str, purpose: str) -> Optional[str]:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def create_invite_token(org_id: str, email: str, role: str, hours: int = 168) -> str:
+    settings = get_settings()
+    expire = _utcnow() + timedelta(hours=hours)
+    payload = {
+        "org_id": org_id,
+        "email": email.strip().lower(),
+        "role": role,
+        "purpose": "invite",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm="HS256")
+
+
+def decode_invite_token(token: str) -> Optional[dict[str, Any]]:
+    settings = get_settings()
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
+        if payload.get("purpose") != "invite":
+            return None
+        return payload
+    except JWTError:
+        return None

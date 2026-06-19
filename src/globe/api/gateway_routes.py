@@ -1,7 +1,11 @@
 from typing import Optional
 
+import asyncio
+import json
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from globe.api.auth import require_api_access
 from globe.api.routes import AgentRequest, KnowledgeRequest, OrderRequest, ProductImportRequest, ProductRequest
@@ -15,22 +19,43 @@ from globe.routing.geo_router import GeoRouter
 def build_gateway_peers() -> dict:
     settings = get_settings()
     return {
-        region_id: PeerClient(region_id, url, api_key=settings.api_key)
+        region_id: PeerClient(
+            region_id,
+            url,
+            api_key=settings.api_key,
+            replication_secret=settings.replication_secret,
+        )
         for region_id, url in settings.gateway_peer_map.items()
     }
 
 
-def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
+from globe.observability.store import ObservabilityStore
+
+
+def build_gateway_router(
+    proxy: GatewayProxy, router: GeoRouter, observ: ObservabilityStore | None = None
+) -> APIRouter:
     settings = get_settings()
     api = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_access)])
 
     @api.get("/product")
     async def product_info() -> dict:
+        catalog_products = 0
+        knowledge_docs = 0
+        try:
+            products = await proxy.proxy_json("us-east-1", "GET", "/api/v1/regions/us-east-1/products")
+            catalog_products = len(products.get("products", []))
+            knowledge = await proxy.proxy_json("us-east-1", "GET", "/api/v1/regions/us-east-1/knowledge")
+            knowledge_docs = len(knowledge.get("documents", []))
+        except httpx.HTTPError:
+            pass
+
         return {
             "name": settings.product_name,
             "tagline": settings.product_tagline,
             "version": "1.0.0",
             "deployment_mode": "gateway",
+            "environment": settings.environment,
             "local_region": None,
             "public_url": settings.public_url or None,
             "features": [
@@ -46,6 +71,35 @@ def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
             "guest_read_enabled": settings.guest_read_enabled,
             "oauth_providers": settings.oauth_providers,
             "llm_mode": "openai" if settings.llm_enabled else "mock",
+            "database": "postgresql",
+            "catalog_products": catalog_products,
+            "knowledge_docs": knowledge_docs,
+        }
+
+    @api.get("/catalog")
+    async def catalog_overview(region_id: str = Query("us-east-1")) -> dict:
+        try:
+            products_data = await proxy.proxy_json(
+                region_id, "GET", f"/api/v1/regions/{region_id}/products"
+            )
+            products = products_data.get("products", [])
+            knowledge_data = await proxy.proxy_json(
+                region_id, "GET", f"/api/v1/regions/{region_id}/knowledge"
+            )
+            knowledge_docs = len(knowledge_data.get("documents", []))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail=format_proxy_error(exc)) from exc
+
+        plans = [p for p in products if p.get("category") == "plans"]
+        addons = [p for p in products if p.get("category") == "addons"]
+        return {
+            "region": region_id,
+            "plans": plans,
+            "addons": addons,
+            "products_total": len(products),
+            "knowledge_docs": knowledge_docs,
         }
 
     @api.get("/health")
@@ -142,6 +196,27 @@ def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
                 "POST",
                 f"/api/v1/regions/{region_id}/orders",
                 json_body=body.model_dump(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail=format_proxy_error(exc)) from exc
+
+    @api.get("/regions/{region_id}/orders")
+    async def list_orders(
+        region_id: str,
+        limit: int = Query(50, ge=1, le=200),
+        since: str = Query(""),
+    ) -> dict:
+        try:
+            params = {"limit": limit}
+            if since:
+                params["since"] = since
+            return await proxy.proxy_json(
+                region_id,
+                "GET",
+                f"/api/v1/regions/{region_id}/orders",
+                params=params,
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -274,6 +349,50 @@ def build_gateway_router(proxy: GatewayProxy, router: GeoRouter) -> APIRouter:
 
     @api.get("/metrics")
     async def metrics() -> dict:
+        if observ is not None:
+            await router.refresh_probes()
         return await proxy.aggregate_metrics()
+
+    @api.get("/metrics/history")
+    async def metrics_history(
+        metric: str = Query("latency_ms"),
+        region_id: Optional[str] = Query(None),
+        since_hours: float = Query(24, ge=1, le=168),
+        limit: int = Query(500, ge=1, le=2000),
+        fleet_only: bool = Query(False, description="Only fleet-wide aggregate points"),
+    ) -> dict:
+        if not observ:
+            return {"metric": metric, "points": []}
+        points = observ.metrics_history(
+            metric, region_id=region_id, since_hours=since_hours, limit=limit
+        )
+        if fleet_only:
+            points = [p for p in points if p.get("region_id") is None]
+        return {"metric": metric, "points": points}
+
+    @api.get("/metrics/summary")
+    async def metrics_summary(
+        metric: str = Query("latency_ms"),
+        since_hours: float = Query(24, ge=1, le=168),
+    ) -> dict:
+        if not observ:
+            return {"metric": metric, "summary": {"count": 0}}
+        return {"metric": metric, "summary": observ.metrics_summary(metric, since_hours)}
+
+    @api.get("/activity")
+    async def activity(limit: int = Query(50, ge=1, le=200)) -> dict:
+        if not observ:
+            return {"items": []}
+        return {"items": observ.activity_feed(limit=limit)}
+
+    @api.get("/stream/metrics")
+    async def stream_metrics() -> StreamingResponse:
+        async def generate():
+            while True:
+                payload = await proxy.aggregate_metrics()
+                yield f"data: {json.dumps(payload)}\n\n"
+                await asyncio.sleep(3)
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
 
     return api

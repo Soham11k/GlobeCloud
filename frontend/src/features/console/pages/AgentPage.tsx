@@ -3,8 +3,13 @@ import ReactMarkdown from "react-markdown";
 import { useConsole } from "../ConsoleContext";
 import { useProduct } from "@/lib/hooks";
 import { api, streamAgentAsk, type AgentResponse } from "@/lib/api";
-import { Panel, Chip, Field } from "../components/ui";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel, Chip } from "../components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type Message = {
   role: "user" | "agent";
@@ -12,6 +17,12 @@ type Message = {
   meta?: AgentResponse;
   streaming?: boolean;
 };
+
+const SUGGESTIONS = [
+  "How does replication work?",
+  "What are the rate limits?",
+  "Explain billing and plans",
+];
 
 export function AgentPage() {
   const { client } = useConsole();
@@ -36,11 +47,7 @@ export function AgentPage() {
 
       try {
         const { answer, meta } = await streamAgentAsk(
-          {
-            question,
-            client_lat: client.lat,
-            client_lon: client.lon,
-          },
+          { question, client_lat: client.lat, client_lon: client.lon },
           (full) => {
             setMessages((m) => {
               const copy = [...m];
@@ -76,62 +83,72 @@ export function AgentPage() {
     }
   };
 
-  const provider = product?.llm_mode === "openai" ? "OpenAI GPT-4o-mini" : "Local heuristic (no OPENAI_API_KEY)";
+  const provider =
+    product?.llm_mode === "openai" ? "OpenAI GPT-4o-mini" : "Local heuristic";
 
   return (
-    <div className="space-y-4 h-[calc(100vh-8rem)] flex flex-col">
-      <div>
-        <h1 className="text-lg font-semibold">RAG agent</h1>
-        <p className="console-mono mt-1 text-[var(--gc-dim)]">
-          POST /agent/ask · provider: {provider} · client {client.lat.toFixed(2)}, {client.lon.toFixed(2)}
-        </p>
-      </div>
+    <div className="flex h-[calc(100vh-10rem)] flex-col gap-6">
+      <PageHeader
+        title="Agent"
+        description={`${provider} · grounded on pgvector knowledge · client ${client.lat.toFixed(2)}, ${client.lon.toFixed(2)}`}
+      />
 
-      <Panel title="Session" className="flex-1 flex flex-col min-h-0 !p-0">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[320px]">
+      <Panel title="Conversation" className="flex flex-1 flex-col min-h-0 !p-0 overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[280px]">
           {!messages.length && (
-            <p className="console-mono text-[var(--gc-dim)] text-center py-12">
-              Ask about replication, routing, billing, or security — answers cite knowledge docs from your SQLite index.
-            </p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-sm text-muted-foreground max-w-md">
+                Ask about replication, routing, billing, or security. Answers cite your knowledge base with confidence scores.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {SUGGESTIONS.map((q) => (
+                  <Badge
+                    key={q}
+                    variant="accent"
+                    className="cursor-pointer hover:bg-accent/25"
+                    onClick={() => ask(q)}
+                  >
+                    {q}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           )}
           {messages.map((msg, i) => (
-            <div key={i} className={msg.role === "user" ? "text-right" : ""}>
+            <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
               <div
-                className={`inline-block max-w-[90%] text-left px-3 py-2 text-sm ${
+                className={cn(
+                  "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
                   msg.role === "user"
-                    ? "bg-[var(--gc-accent)] text-white"
-                    : "console-panel border-[var(--gc-border)]"
-                }`}
+                    ? "bg-accent text-accent-foreground rounded-br-md glow-ring"
+                    : "glass rounded-bl-md"
+                )}
               >
                 {msg.role === "agent" ? (
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown>{msg.content || (msg.streaming ? "…" : "")}</ReactMarkdown>
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown>{msg.content || (msg.streaming ? "▍" : "")}</ReactMarkdown>
                   </div>
                 ) : (
                   msg.content
                 )}
                 {msg.meta && (
-                  <div className="mt-3 pt-2 border-t border-[var(--gc-border)] space-y-2">
-                    <div className="flex flex-wrap gap-2 console-mono text-[10px]">
+                  <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+                    <div className="flex flex-wrap gap-2 text-xs">
                       {msg.meta.backend_region && <Chip variant="ok">{msg.meta.backend_region}</Chip>}
                       <Chip>{msg.meta.confidence}</Chip>
-                      <span className="text-[var(--gc-dim)]">
+                      <span className="text-muted-foreground">
                         {msg.meta.inference.provider}
-                        {msg.meta.inference.model && ` / ${msg.meta.inference.model}`}
+                        {msg.meta.inference.model && ` · ${msg.meta.inference.model}`}
                         {" · "}{msg.meta.inference.latency_ms}ms
                       </span>
                     </div>
-                    {msg.meta.tool_trace?.map((t, j) => (
-                      <details key={j} className="console-mono text-[10px] text-[var(--gc-dim)]">
-                        <summary className="cursor-pointer">{t.tool}</summary>
-                        <pre className="mt-1 whitespace-pre-wrap overflow-x-auto">{JSON.stringify(t, null, 2)}</pre>
-                      </details>
-                    ))}
                     {msg.meta.citations?.map((c, j) => (
-                      <div key={j} className="console-panel p-2 text-[11px] border-[var(--gc-border)]">
-                        <strong>{c.title}</strong>
-                        <span className="text-[var(--gc-dim)]"> · {c.region} · score {c.score.toFixed(2)}</span>
-                        <p className="mt-1 text-[var(--gc-muted)] line-clamp-3">{c.body}</p>
+                      <div key={j} className="glass-panel mt-2 p-3 text-xs">
+                        <p className="font-medium">{c.title}</p>
+                        <p className="text-muted-foreground">
+                          {c.region} · score {c.score.toFixed(2)}
+                        </p>
+                        <p className="mt-1 text-muted-foreground line-clamp-2">{c.body}</p>
                       </div>
                     ))}
                   </div>
@@ -141,28 +158,19 @@ export function AgentPage() {
           ))}
           <div ref={bottomRef} />
         </div>
-        <div className="border-t border-[var(--gc-border)] p-4 space-y-2">
-          <div className="flex flex-wrap gap-2 console-mono text-[10px]">
-            {["How does replication work?", "What are the rate limits?", "Billing and plans"].map((q) => (
-              <button key={q} type="button" className="console-chip hover:border-[var(--gc-accent)]" onClick={() => ask(q)}>
-                {q}
-              </button>
-            ))}
-          </div>
+        <div className="glass border-t border-border/60 p-4">
           <div className="flex gap-2">
-            <Field label="">
-              <input
-                className="console-input flex-1"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Question…"
-                onKeyDown={(e) => e.key === "Enter" && ask(input)}
-                disabled={loading}
-              />
-            </Field>
-            <button type="button" className="console-btn console-btn-primary shrink-0" onClick={() => ask(input)} disabled={loading}>
-              {loading ? "…" : "Ask"}
-            </button>
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask a question…"
+              onKeyDown={(e) => e.key === "Enter" && ask(input)}
+              disabled={loading}
+              className="flex-1"
+            />
+            <Button onClick={() => ask(input)} disabled={loading}>
+              {loading ? "Thinking…" : "Send"}
+            </Button>
           </div>
         </div>
       </Panel>

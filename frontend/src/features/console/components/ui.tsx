@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StatusDot } from "@/components/layout/StatusBadge";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { cn } from "@/lib/utils";
 
 export function StatusLED({ status }: { status: "ok" | "warn" | "err" | "off" }) {
-  const map = { ok: "console-led-ok", warn: "console-led-warn", err: "console-led-err", off: "console-led-off" };
-  return <span className={cn("console-led", map[status])} aria-hidden />;
+  return <StatusDot status={status} />;
 }
 
 export function Chip({
@@ -15,8 +18,12 @@ export function Chip({
   variant?: "default" | "ok" | "warn" | "err";
   className?: string;
 }) {
-  const v = { default: "", ok: "console-chip-ok", warn: "console-chip-warn", err: "console-chip-err" };
-  return <span className={cn("console-chip", v[variant], className)}>{children}</span>;
+  const map = { default: "default", ok: "success", warn: "warning", err: "danger" } as const;
+  return (
+    <Badge variant={map[variant]} className={className}>
+      {children}
+    </Badge>
+  );
 }
 
 export function Panel({
@@ -31,22 +38,22 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("console-panel", className)}>
-      <header className="flex items-center justify-between gap-3 border-b border-[var(--gc-border)] px-4 py-3">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--gc-muted)]">{title}</h2>
+    <div className={cn("glass-panel overflow-hidden", className)}>
+      <div className="flex flex-row items-center justify-between border-b border-border/60 px-5 py-4">
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         {action}
-      </header>
-      <div className="p-4">{children}</div>
-    </section>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
   );
 }
 
-export function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
+export function Kpi({ label, value, sub, highlight }: { label: string; value: ReactNode; sub?: string; highlight?: boolean }) {
   return (
-    <div className="console-panel px-4 py-4">
-      <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--gc-dim)] mb-2">{label}</p>
-      <p className="console-kpi-val text-[var(--gc-text)]">{value}</p>
-      {sub && <p className="console-mono mt-1.5 text-[var(--gc-dim)]">{sub}</p>}
+    <div className={cn("glass-panel p-5", highlight && "glow-ring border-accent/30")}>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
+      {sub && <p className="mt-1 data-mono text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }
@@ -61,29 +68,31 @@ export function DataTable({
   empty?: string;
 }) {
   if (!rows.length) {
-    return <p className="console-mono text-[var(--gc-dim)] py-6 text-center">{empty ?? "No data"}</p>;
+    return <EmptyState title={empty ?? "No data"} className="py-8" />;
   }
   return (
-    <div className="overflow-x-auto -mx-4">
-      <table className="console-table w-full">
-        <thead>
-          <tr>
-            {headers.map((h) => (
-              <th key={h}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {row.map((cell, j) => (
-                <td key={j}>{cell}</td>
-              ))}
-            </tr>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {headers.map((h) => (
+            <TableHead key={h} className="text-xs uppercase tracking-wide">
+              {h}
+            </TableHead>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row, i) => (
+          <TableRow key={i} className="border-border/40 hover:bg-muted/30">
+            {row.map((cell, j) => (
+              <TableCell key={j} className={j === 0 ? "font-medium" : "data-mono"}>
+                {cell}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -96,7 +105,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="console-mono text-[10px] uppercase tracking-wider text-[var(--gc-dim)]">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
     </label>
   );

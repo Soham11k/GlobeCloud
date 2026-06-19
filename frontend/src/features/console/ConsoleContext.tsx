@@ -35,6 +35,23 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
     }
   }, [regionIds, localRegion, region]);
 
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setClientState({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          label: "You",
+        });
+      },
+      () => {
+        /* keep NYC default if denied */
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
+
   const setRegion = useCallback((r: string) => setRegionState(r), []);
   const setClient = useCallback((c: ClientCoords) => setClientState(c), []);
 

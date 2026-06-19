@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator, Optional
 
 from sqlalchemy import create_engine, text
@@ -31,7 +33,9 @@ def get_platform_engine() -> Engine:
     settings = get_settings()
     if _platform_engine is None:
         _platform_engine = _make_engine(settings.database_url)
-        _PlatformSession = sessionmaker(bind=_platform_engine, autoflush=False, autocommit=False)
+        _PlatformSession = sessionmaker(
+            bind=_platform_engine, autoflush=False, autocommit=False, expire_on_commit=False
+        )
     return _platform_engine
 
 
@@ -41,7 +45,9 @@ def get_regional_engine() -> Engine:
     if _regional_engine is None:
         url = settings.regional_db_url
         _regional_engine = _make_engine(url)
-        _RegionalSession = sessionmaker(bind=_regional_engine, autoflush=False, autocommit=False)
+        _RegionalSession = sessionmaker(
+            bind=_regional_engine, autoflush=False, autocommit=False, expire_on_commit=False
+        )
     return _regional_engine
 
 
@@ -75,8 +81,33 @@ def get_regional_session() -> Generator[Session, None, None]:
         session.close()
 
 
+def reset_engines() -> None:
+    """Reset cached engines (tests only)."""
+    global _platform_engine, _regional_engine, _PlatformSession, _RegionalSession
+    if _platform_engine is not None:
+        _platform_engine.dispose()
+    if _regional_engine is not None:
+        _regional_engine.dispose()
+    _platform_engine = None
+    _regional_engine = None
+    _PlatformSession = None
+    _RegionalSession = None
+
+
+def migrate_db() -> None:
+    """Apply Alembic migrations to the platform database."""
+    from alembic import command
+    from alembic.config import Config
+
+    root = Path(__file__).resolve().parents[3]
+    cfg = Config(str(root / "alembic.ini"))
+    settings = get_settings()
+    cfg.set_main_option("sqlalchemy.url", settings.database_url)
+    command.upgrade(cfg, "head")
+
+
 def init_db() -> None:
-    """Create tables and extensions (dev/bootstrap). Prefer Alembic in production."""
+    """Create tables and extensions. Production uses Alembic; dev uses create_all."""
     from globe.db import platform_models  # noqa: F401
     from globe.db import regional_models  # noqa: F401
 
@@ -85,9 +116,19 @@ def init_db() -> None:
     regional_engine = get_regional_engine()
     if not settings.uses_sqlite:
         engine = regional_engine if regional_engine.url != platform_engine.url else platform_engine
-        with engine.connect() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            conn.commit()
-    PlatformBase.metadata.create_all(bind=platform_engine)
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+        except Exception:
+            import logging
+
+            logging.getLogger("globecloud").warning(
+                "pgvector extension unavailable — dev mode uses text embeddings"
+            )
+    if settings.is_production and not os.environ.get("GLOBE_MIGRATIONS_DONE"):
+        migrate_db()
+    else:
+        PlatformBase.metadata.create_all(bind=platform_engine)
     RegionalBase.metadata.create_all(bind=regional_engine)
 

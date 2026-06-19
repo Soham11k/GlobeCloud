@@ -10,6 +10,9 @@ import { StatusPage } from "@/pages/StatusPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
+import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { AuthRedirect } from "@/components/auth/AuthRedirect";
 import { hydrateAuthFromStorage } from "@/lib/auth";
 
@@ -30,6 +33,9 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />
               <Route path="/signup" element={<AuthRedirect><SignupPage /></AuthRedirect>} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/" element={<LandingGate />} />
               <Route path="/welcome" element={<WelcomePage />} />

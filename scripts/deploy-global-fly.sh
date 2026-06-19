@@ -33,8 +33,12 @@ JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
 CORS_ORIGINS="${CORS_ORIGINS:-${GATEWAY_URL}}"
 
 echo "==> GlobeCloud Global Deploy"
-echo "    Provision Fly Postgres per app and set DATABASE_URL / REGIONAL_DATABASE_URL secrets"
-echo "    Run: flyctl postgres create && flyctl secrets set DATABASE_URL=... -a \$app"
+echo "    Postgres: run ./scripts/provision-fly-postgres.sh before first deploy (or set DATABASE_URL secrets manually)"
+if [[ "${PROVISION_POSTGRES:-0}" == "1" ]]; then
+  echo "==> PROVISION_POSTGRES=1 — provisioning Fly Postgres..."
+  chmod +x scripts/provision-fly-postgres.sh
+  ./scripts/provision-fly-postgres.sh
+fi
 echo ""
 
 ensure_app() {

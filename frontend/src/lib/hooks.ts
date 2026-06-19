@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   api,
   type HealthInfo,
@@ -79,11 +79,18 @@ export function useHealth() {
 }
 
 export function useMetrics() {
+  return useLiveMetrics();
+}
+
+/** Polls /metrics every 3s and merges SSE stream for live latency ticks. */
+export function useLiveMetrics() {
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["metrics"],
     queryFn: () => api<MetricsInfo>("/metrics"),
-    refetchInterval: 15000,
+    refetchInterval: 3000,
   });
+
   useEffect(() => {
     q.data?.router.forEach((r) => {
       if (r.latency_ms != null) pushMetric(`latency:${r.region_id}`, r.latency_ms);
@@ -92,18 +99,74 @@ export function useMetrics() {
       pushMetric("cache_hit", q.data.inference_cache.hit_rate * 100);
     }
   }, [q.data]);
+
+  useEffect(() => {
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/v1/stream/metrics");
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data) as Partial<MetricsInfo> & {
+            router?: MetricsInfo["router"];
+          };
+          if (!data.router) return;
+          qc.setQueryData<MetricsInfo>(["metrics"], (prev) => ({
+            deployment_mode: data.deployment_mode ?? prev?.deployment_mode ?? "regional",
+            local_region: prev?.local_region,
+            inference_cache: prev?.inference_cache,
+            router: data.router!,
+          }));
+          data.router.forEach((r) => {
+            if (r.latency_ms != null) pushMetric(`latency:${r.region_id}`, r.latency_ms);
+          });
+        } catch {
+          /* ignore */
+        }
+      };
+    } catch {
+      /* SSE unavailable */
+    }
+    return () => es?.close();
+  }, [qc]);
+
   return q;
 }
 
-export function useMetricsHistory(metric = "latency_ms", sinceHours = 24) {
+export function useMetricsHistory(metric = "latency_ms", sinceHours = 24, fleetOnly = false) {
+  const hours = Math.min(sinceHours, 168);
   return useQuery({
-    queryKey: ["metrics-history", metric, sinceHours],
+    queryKey: ["metrics-history", metric, hours, fleetOnly],
     queryFn: () =>
       api<{ points: MetricPoint[] }>(
-        `/metrics/history?metric=${metric}&since_hours=${sinceHours}`
+        `/metrics/history?metric=${metric}&since_hours=${hours}${fleetOnly ? "&fleet_only=true" : ""}`
       ),
     refetchInterval: 30000,
   });
+}
+
+/** Client-side fleet latency samples from live /metrics polls (fills uptime bar before DB history exists). */
+export function useFleetLatencySamples(max = 90) {
+  const [samples, setSamples] = useState<MetricPoint[]>([]);
+  const { data: metrics } = useLiveMetrics();
+  const lastTick = useRef("");
+
+  useEffect(() => {
+    if (!metrics?.router?.length) return;
+    const vals = metrics.router
+      .filter((r) => r.latency_ms != null)
+      .map((r) => r.latency_ms as number);
+    if (!vals.length) return;
+    const tick = metrics.router.map((r) => `${r.region_id}:${r.latency_ms}`).join("|");
+    if (tick === lastTick.current) return;
+    lastTick.current = tick;
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    setSamples((prev) => [
+      ...prev.slice(-(max - 1)),
+      { value: avg, ts: new Date().toISOString(), metric: "latency_ms" },
+    ]);
+  }, [metrics, max]);
+
+  return samples;
 }
 
 export function useMetricsStream(enabled = true) {
@@ -242,5 +305,26 @@ export function useAgentMutation() {
         method: "POST",
         body: JSON.stringify(body),
       }),
+  });
+}
+
+export function useBillingStatus() {
+  return useQuery({
+    queryKey: ["billing-status"],
+    queryFn: () => import("./settings").then((m) => m.fetchBillingStatus()),
+  });
+}
+
+export function useApiKeys() {
+  return useQuery({
+    queryKey: ["api-keys"],
+    queryFn: () => import("./settings").then((m) => m.fetchApiKeys()),
+  });
+}
+
+export function useOrgMembers() {
+  return useQuery({
+    queryKey: ["org-members"],
+    queryFn: () => import("./settings").then((m) => m.fetchMembers()),
   });
 }

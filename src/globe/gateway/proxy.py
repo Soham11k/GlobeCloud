@@ -115,6 +115,7 @@ class GatewayProxy:
                     "latency_ms": latency_ms if healthy else None,
                     "is_local": False,
                     "peer_url": peer.base_url,
+                    "probe_mode": "http",
                 }
             )
         return {

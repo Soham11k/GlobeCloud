@@ -211,6 +211,7 @@ def build_api_router(
                     "error_rate": round(p.error_rate, 2),
                     "is_local": p.is_local,
                     "peer_url": p.peer_url,
+                    "probe_mode": p.probe_mode,
                 }
                 for p in probes
             ],
@@ -379,6 +380,7 @@ def build_api_router(
 
     @api.get("/metrics")
     async def metrics() -> dict:
+        await router.refresh_probes()
         return {
             "deployment_mode": settings.deployment_mode,
             "local_region": cluster.local_region_id,
@@ -393,6 +395,7 @@ def build_api_router(
                     else round(h.latency_ms, 2),
                     "is_local": h.is_local,
                     "peer_url": h.peer_url,
+                    "probe_mode": h.probe_mode,
                 }
                 for h in router.snapshot()
             ],
@@ -404,15 +407,16 @@ def build_api_router(
         region_id: Optional[str] = None,
         since_hours: float = Query(24, ge=1, le=168),
         limit: int = Query(500, ge=1, le=2000),
+        fleet_only: bool = Query(False),
     ) -> dict:
         if not observ:
             return {"metric": metric, "points": []}
-        return {
-            "metric": metric,
-            "points": observ.metrics_history(
-                metric, region_id=region_id, since_hours=since_hours, limit=limit
-            ),
-        }
+        points = observ.metrics_history(
+            metric, region_id=region_id, since_hours=since_hours, limit=limit
+        )
+        if fleet_only:
+            points = [p for p in points if p.get("region_id") is None]
+        return {"metric": metric, "points": points}
 
     @api.get("/metrics/summary")
     async def metrics_summary(
@@ -466,6 +470,7 @@ def build_api_router(
     async def stream_metrics() -> StreamingResponse:
         async def generate():
             while True:
+                await router.refresh_probes()
                 payload = {
                     "router": [
                         {
@@ -480,7 +485,7 @@ def build_api_router(
                     "sync": replicator.status(),
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
-                await asyncio.sleep(5)
+                await asyncio.sleep(3)
 
         return StreamingResponse(generate(), media_type="text/event-stream")
 

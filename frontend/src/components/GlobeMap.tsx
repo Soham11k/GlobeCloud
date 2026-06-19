@@ -30,7 +30,7 @@ const FALLBACK_REGIONS: MapRegion[] = [
   { id: "ap-south-1", lat: 19.08, lon: 72.88, label: "AP South" },
 ];
 
-type Probe = { region_id: string; healthy: boolean; latency_ms?: number | null };
+type Probe = { region_id: string; healthy: boolean; latency_ms?: number | null; standby?: boolean };
 
 type Props = {
   selected?: string;
@@ -195,7 +195,8 @@ export function GlobeMap({
       {mapRegions.map((r) => {
         const pt = project(r.lat, r.lon);
         const probe = probeMap[r.id];
-        const healthy = probe?.healthy !== false;
+        const standby = probe?.standby;
+        const healthy = probe?.healthy !== false && !standby;
         const isSelected = selected === r.id;
         const isHovered = hovered === r.id;
         return (
@@ -235,7 +236,7 @@ export function GlobeMap({
               cx={pt.x}
               cy={pt.y}
               r={isSelected || isHovered ? 9 : 7}
-              fill={healthy ? (isSelected ? "#5b52ff" : "#2dd4a0") : "#ef4444"}
+              fill={standby ? "#64748b" : healthy ? (isSelected ? "#5b52ff" : "#2dd4a0") : "#ef4444"}
               stroke="#fff"
               strokeWidth="1.5"
               filter={isSelected || isHovered ? "url(#probeGlow)" : undefined}

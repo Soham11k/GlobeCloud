@@ -135,3 +135,16 @@ class RoutingEvent(PlatformBase):
     latency_ms: Mapped[float] = mapped_column(nullable=False)
     healthy: Mapped[bool] = mapped_column(Boolean, default=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+
+
+class OrganizationInvite(PlatformBase):
+    __tablename__ = "organization_invites"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), default="member")
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    invited_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

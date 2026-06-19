@@ -49,6 +49,7 @@ class MetricsSampler:
             await asyncio.sleep(self.interval_s)
 
     async def sample_once(self) -> None:
+        await self.router.refresh_probes()
         for probe in self.router.snapshot():
             self.store.record_metric(
                 "latency_ms",

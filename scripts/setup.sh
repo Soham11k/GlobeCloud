@@ -40,12 +40,18 @@ elif [[ -f .env ]]; then
   echo "==> .env already exists"
 fi
 
+if [[ -f .env ]]; then
+  echo "==> Filling missing secrets in .env..."
+  python3 scripts/sync-env-secrets.py --all --fix-native-db 2>/dev/null || true
+fi
+
 echo ""
 echo "Setup complete."
 echo ""
 echo "Next steps:"
-echo "  Share a public demo:  ./scripts/share-demo.sh"
-echo "  Local development:    ./scripts/start-clean.sh"
+echo "  Production local (3 regions + gateway):  ./scripts/start-production-local.sh"
+echo "  Share a public demo:                     ./scripts/share-demo.sh"
+echo "  Local development:                       ./scripts/start-clean.sh"
 echo "  Frontend dev server:  cd frontend && npm run dev"
 echo "  Full guide:           docs/GETTING_STARTED.md"
 echo ""

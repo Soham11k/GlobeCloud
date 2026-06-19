@@ -12,7 +12,7 @@ from globe.auth.oauth import (
     github_authorize_url,
     google_authorize_url,
 )
-from globe.auth.tokens import create_access_token, create_email_token
+from globe.auth.tokens import create_access_token, create_email_token, decode_email_token
 from globe.config import get_settings
 from globe.db.platform_store import PlatformStore, User
 from globe.email.resend_service import password_reset_html, send_email, verification_email_html
@@ -25,11 +25,25 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(default="", max_length=120)
+    invite_token: str = Field(default="", max_length=2048)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class TokenRequest(BaseModel):
+    token: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class SessionRequest(BaseModel):
@@ -83,7 +97,8 @@ def build_auth_router() -> APIRouter:
     async def register(body: RegisterRequest, request: Request, response: Response) -> AuthResponse:
         store = _get_store(request)
         try:
-            user = store.create_user(body.email, body.password, body.name)
+            invite = body.invite_token.strip() or None
+            user = store.create_user(body.email, body.password, body.name, invite_token=invite)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         settings = get_settings()
@@ -154,6 +169,9 @@ def build_auth_router() -> APIRouter:
 
     @router.get("/oauth/{provider}")
     async def oauth_start(provider: str, request: Request) -> RedirectResponse:
+        invite = request.query_params.get("invite", "").strip()
+        if invite:
+            request.session["oauth_invite"] = invite
         if provider == "google":
             return RedirectResponse(google_authorize_url(request), status_code=302)
         if provider == "github":
@@ -186,7 +204,11 @@ def build_auth_router() -> APIRouter:
         if not provider_user_id:
             raise HTTPException(status_code=400, detail="OAuth profile missing user id")
 
-        user = store.get_or_create_oauth_user(provider, provider_user_id, email, name)
+        invite = request.session.pop("oauth_invite", None)
+        invite = invite.strip() if invite else None
+        user = store.get_or_create_oauth_user(
+            provider, provider_user_id, email, name, invite_token=invite or None
+        )
         refresh = store.issue_refresh_token(user.id, settings.jwt_refresh_days)
         access = create_access_token(
             user.id, user.email, org_id=user.org_id, role=user.org_role
@@ -217,14 +239,34 @@ def build_auth_router() -> APIRouter:
         if not user:
             raise HTTPException(status_code=401, detail="Invalid OAuth session")
         return _issue_tokens(store, user, response)
-    async def forgot_password(body: LoginRequest, request: Request) -> dict:
+
+    @router.post("/forgot-password")
+    async def forgot_password(body: ForgotPasswordRequest, request: Request) -> dict:
         store = _get_store(request)
         user = store.get_user_by_email(body.email)
-        if user and user.has_password:
-            settings = get_settings()
+        settings = get_settings()
+        if user and user.has_password and settings.email_enabled:
             token = create_email_token(user.id, "reset", hours=2)
             link = f"{settings.oauth_redirect_base_url.rstrip('/')}/reset-password?token={token}"
             await send_email(user.email, "Reset your GlobeCloud password", password_reset_html(link))
+        return {"ok": True}
+
+    @router.post("/verify-email")
+    async def verify_email(body: TokenRequest, request: Request) -> dict:
+        store = _get_store(request)
+        user_id = decode_email_token(body.token, "verify")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        store.verify_email(user_id)
+        return {"ok": True}
+
+    @router.post("/reset-password")
+    async def reset_password(body: ResetPasswordRequest, request: Request) -> dict:
+        store = _get_store(request)
+        user_id = decode_email_token(body.token, "reset")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        store.set_password(user_id, body.password)
         return {"ok": True}
 
     return router

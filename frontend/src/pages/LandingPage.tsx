@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/brand/Logo";
 import { ProductScreenshots } from "@/components/brand/ProductScreenshots";
 import { StepIllustration } from "@/components/brand/StepIllustration";
-import { GlobeMap } from "@/components/GlobeMap";
-import { ProductShell } from "@/components/layout/ProductShell";
+import { CinematicShell } from "@/components/layout/CinematicShell";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SectionHeader } from "@/components/layout/SectionHeader";
+import { LiveStatBar } from "@/components/layout/LiveStatBar";
+import { GlobeScenePanel } from "@/components/globe/GlobeScenePanel";
+import { BrowserMock } from "@/components/brand/BrowserMock";
 import {
   useProduct,
   useHealth,
@@ -22,9 +25,9 @@ import { useAuth } from "@/lib/useAuth";
 import { PlanIcon, tierFromProduct } from "@/components/brand/PlanIcon";
 
 const HOW_IT_WORKS = [
-  { step: "route" as const, title: "Geo routing", desc: "Probes regional health and picks the lowest-latency node for each request." },
-  { step: "replicate" as const, title: "Replication", desc: "Append-only logs sync products, orders, and knowledge docs across regional SQLite files." },
-  { step: "ask" as const, title: "Cited copilot", desc: "TF-IDF retrieval grounds answers in your docs with confidence scores." },
+  { step: "route" as const, title: "Geo routing", desc: "Probes regional health and picks the lowest-latency PostgreSQL node for each request." },
+  { step: "replicate" as const, title: "Replication", desc: "Transactional outbox syncs products, orders, and knowledge docs across regional Postgres clusters." },
+  { step: "ask" as const, title: "Cited agent", desc: "pgvector retrieval grounds answers in your docs with OpenAI streaming and confidence scores." },
 ];
 
 const FAQ = [
@@ -34,15 +37,15 @@ const FAQ = [
   },
   {
     q: "Do I need an OpenAI key?",
-    a: "No. Copilot works with a local heuristic fallback. Set OPENAI_API_KEY on the server for GPT-4o-mini with citation tracking.",
+    a: "No for basic use. Set OPENAI_API_KEY on the server for GPT-4o-mini with citation tracking and streaming responses.",
   },
   {
     q: "How does replication handle conflicts?",
-    a: "Stock updates use last-write-wins with a floor of zero. Orders and knowledge docs append without merge conflicts.",
+    a: "Stock updates use last-write-wins with a floor of zero. Orders and knowledge docs append via the transactional outbox without merge conflicts.",
   },
   {
     q: "Can I deploy to production?",
-    a: "Yes. Fly.io configs are included for a global gateway plus three regional backends. See docs/GETTING_STARTED.md.",
+    a: "Yes. Fly.io configs are included for a global gateway plus three regional Postgres backends. See docs/GETTING_STARTED.md.",
   },
   {
     q: "Is the catalog customizable?",
@@ -76,59 +79,48 @@ export function LandingPage() {
       latency_ms: r.latency_ms,
     })) ?? [];
 
+  const mapHealthy = Object.fromEntries(
+    (metrics?.router ?? []).map((r) => [r.region_id, r.healthy])
+  );
+  const mapLatencies = Object.fromEntries(
+    (metrics?.router ?? []).map((r) => [r.region_id, r.latency_ms ?? 0])
+  );
+
   return (
-    <ProductShell>
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-[var(--surface-0)]/80 backdrop-blur-md">
-        <div className="section-wrap flex items-center justify-between h-14">
-          <Logo />
-          <nav className="hidden sm:flex items-center gap-6 text-sm text-white/50">
-            <a href="#how" className="hover:text-white transition-colors">How it works</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-            <Link to="/status" className="hover:text-white transition-colors">Status</Link>
-            <a href="/api/docs" target="_blank" rel="noopener" className="hover:text-white transition-colors">Docs</a>
-          </nav>
-          <div className="flex gap-2">
-            {!isAuthenticated && (
-              <Button variant="ghost" size="sm" className="text-white/70" asChild>
-                <Link to="/login">Sign in</Link>
-              </Button>
-            )}
-            <Button size="sm" asChild>
-              <Link to="/app">
-                Open console <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+    <CinematicShell>
+      <SiteHeader />
 
-      <section className="relative min-h-[min(88vh,720px)] flex flex-col">
+      <section className="relative flex min-h-[min(94vh,860px)] flex-col">
         <div className="absolute inset-0">
-          <GlobeMap
+          <GlobeScenePanel
+            className="h-full w-full rounded-none border-0"
+            height="100%"
             regions={regionsData?.regions}
-            probes={mapProbes}
-            interactive
-            className="h-full w-full"
+            latencies={mapLatencies}
+            healthy={mapHealthy}
+            variant="hero"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--surface-0)] via-[var(--surface-0)]/40 to-transparent pointer-events-none" />
+          {/* Left vignette for copy legibility — keep the globe large on the right */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/95 via-background/45 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/85 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 section-wrap flex flex-1 flex-col justify-end pb-12 pt-24">
+        <div className="relative z-10 section-wrap flex flex-1 flex-col justify-end pb-14 pt-28">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-xl"
+            className="max-w-md glass-panel p-6 md:max-w-lg md:p-8"
           >
             <Badge variant="accent" className="mb-4 font-mono text-[10px]">
               {deployLabel}
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-semibold leading-[1.08] tracking-tight text-white">
+            <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-foreground md:text-5xl">
               Route globally.
               <br />
-              <span className="text-[var(--accent,#5b52ff)]">Operate locally.</span>
+              <span className="text-accent">Operate locally.</span>
             </h1>
-            <p className="mt-4 text-base text-white/55 max-w-md leading-relaxed">
+            <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
               Live geo routing, multi-region replication, and a cited copilot — explore the console instantly, sign in when you need to write.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -136,46 +128,29 @@ export function LandingPage() {
                 <Link to="/app">Open console</Link>
               </Button>
               {!isAuthenticated && (
-                <Button size="lg" variant="outline" className="border-white/15 bg-white/5 text-white hover:bg-white/10" asChild>
+                <Button size="lg" variant="outline" asChild>
                   <Link to="/signup">Create account</Link>
                 </Button>
               )}
             </div>
           </motion.div>
 
-          <div className="mt-10 flex flex-wrap gap-2">
-            {isLoading
-              ? [...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-28 bg-white/10" />)
-              : mapProbes.map((r) => (
-                  <Badge
-                    key={r.region_id}
-                    variant={r.healthy ? "success" : "danger"}
-                    className="font-mono text-[11px] bg-black/40 backdrop-blur-sm"
-                  >
-                    {r.region_id} · {r.latency_ms != null ? `${Math.round(r.latency_ms)}ms` : "—"}
-                  </Badge>
-                ))}
-            {sync?.interval_s != null && (
-              <Badge variant="default" className="font-mono text-[11px] bg-black/40 backdrop-blur-sm">
-                sync {sync.interval_s}s
-              </Badge>
-            )}
-            {product?.knowledge_docs != null && (
-              <Badge variant="default" className="font-mono text-[11px] bg-black/40 backdrop-blur-sm">
-                {product.knowledge_docs} docs
-              </Badge>
-            )}
-          </div>
+          <LiveStatBar
+            className="mt-10"
+            probes={mapProbes}
+            loading={isLoading}
+            syncInterval={sync?.interval_s}
+            knowledgeDocs={product?.knowledge_docs}
+          />
         </div>
       </section>
 
-      <section id="how" className="section-wrap py-20 md:py-24 border-t border-white/5">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-white">How it works</h2>
-          <p className="mt-3 text-white/50">
-            Three steps from client request to cited answer — no generic middleware stack.
-          </p>
-        </div>
+      <section id="how" className="section-wrap border-t border-border py-20 md:py-24">
+        <SectionHeader
+          eyebrow="Architecture"
+          title="How it works"
+          description="Three steps from client request to cited answer — no generic middleware stack."
+        />
         <div className="mt-12 grid md:grid-cols-3 gap-8">
           {HOW_IT_WORKS.map((item, i) => (
             <motion.div
@@ -187,37 +162,35 @@ export function LandingPage() {
               className="space-y-3"
             >
               <StepIllustration step={item.step} />
-              <h3 className="font-medium text-white">{item.title}</h3>
-              <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
+              <h3 className="font-medium text-foreground">{item.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      <section id="proof" className="section-wrap py-20 md:py-24 border-t border-white/5">
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">Live console data</h2>
-            <p className="mt-3 text-white/50 max-w-md">
-              Routing, replication, and copilot panels read from the same API as /app.
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[var(--surface-1)] overflow-hidden">
+      <section id="proof" className="section-wrap border-t border-border py-20 md:py-24">
+        <div className="grid items-start gap-12 lg:grid-cols-2">
+          <SectionHeader
+            eyebrow="Live data"
+            title="Live console data"
+            description="Routing, replication, and copilot panels read from the same API as /app."
+          />
+          <BrowserMock url="app.globecloud.dev">
             <ProductScreenshots />
-          </div>
+          </BrowserMock>
         </div>
       </section>
 
-      <section id="pricing" className="section-wrap py-20 md:py-24 border-t border-white/5 bg-[var(--surface-1)]/50">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-10">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">Catalog</h2>
-            <p className="mt-2 text-white/50">
-              Plans loaded from your database ({catalog?.products_total ?? "—"} products, {catalog?.knowledge_docs ?? "—"} docs).
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-white/70">
-            <span className={!annual ? "font-medium text-white" : ""}>Monthly</span>
+      <section id="pricing" className="section-wrap border-t border-border bg-muted/20 py-20 md:py-24">
+        <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <SectionHeader
+            eyebrow="Catalog"
+            title="Plans & add-ons"
+            description={`Plans loaded from your database (${catalog?.products_total ?? "—"} products, ${catalog?.knowledge_docs ?? "—"} docs).`}
+          />
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className={!annual ? "font-medium text-foreground" : ""}>Monthly</span>
             <button
               type="button"
               className="relative w-11 h-6 rounded-full bg-white/10 transition-colors"
@@ -230,52 +203,55 @@ export function LandingPage() {
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             </button>
-            <span className={annual ? "font-medium text-white" : ""}>Annual (−20%)</span>
+            <span className={annual ? "font-medium text-foreground" : ""}>Annual (−20%)</span>
           </div>
         </div>
 
         {catalogLoading ? (
           <div className="grid md:grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full bg-white/5" />)}
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full bg-muted/30" />)}
           </div>
         ) : plans.length === 0 ? (
-          <p className="text-sm text-white/50 border border-white/10 rounded-xl p-6">
+          <p className="glass-panel p-6 text-sm text-muted-foreground">
             No catalog products. Run <code className="text-xs">./scripts/seed-production.sh</code> and restart.
           </p>
         ) : (
           <>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid gap-4 md:grid-cols-3">
               {plans.map((plan) => {
                 const tier = tierFromProduct(plan.id, plan.category);
                 const price = annual ? Math.round(plan.price * 0.8) : plan.price;
                 return (
-                  <div key={plan.id} className="rounded-xl border border-white/10 bg-[var(--surface-0)] p-5 flex flex-col">
-                    <div className="flex gap-3 items-start mb-4">
+                  <div
+                    key={plan.id}
+                    className={`glass-panel flex flex-col p-5 ${tier === "pro" ? "glow-ring border-accent/30" : ""}`}
+                  >
+                    <div className="mb-4 flex items-start gap-3">
                       <PlanIcon tier={tier} />
                       <div>
-                        <p className="font-semibold text-white">{plan.name}</p>
-                        <p className="text-xs text-white/40 font-mono">{plan.sku}</p>
+                        <p className="font-semibold text-foreground">{plan.name}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{plan.sku}</p>
                       </div>
                     </div>
-                    <p className="text-3xl font-semibold tabular-nums text-white">
+                    <p className="text-3xl font-semibold tabular-nums text-foreground">
                       ${price.toFixed(0)}
-                      <span className="text-sm font-normal text-white/40">/mo</span>
+                      <span className="text-sm font-normal text-muted-foreground">/mo</span>
                     </p>
                     {plan.description && (
-                      <p className="mt-3 text-sm text-white/50 flex-1 leading-relaxed">{plan.description}</p>
+                      <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{plan.description}</p>
                     )}
                   </div>
                 );
               })}
             </div>
             {addons.length > 0 && (
-              <div className="mt-8 grid sm:grid-cols-3 gap-3">
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {addons.map((addon) => (
-                  <div key={addon.id} className="rounded-lg border border-white/10 bg-[var(--surface-0)] p-4 flex gap-3">
+                  <div key={addon.id} className="glass-panel flex gap-3 p-4">
                     <PlanIcon tier="addon" className="h-10 w-10 shrink-0" />
                     <div>
-                      <p className="font-medium text-sm text-white">{addon.name}</p>
-                      <p className="text-lg font-semibold tabular-nums text-white mt-0.5">
+                      <p className="text-sm font-medium text-foreground">{addon.name}</p>
+                      <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
                         ${(annual ? Math.round(addon.price * 0.8) : addon.price).toFixed(0)}/mo
                       </p>
                     </div>
@@ -287,55 +263,55 @@ export function LandingPage() {
         )}
         <div className="mt-6 flex flex-wrap gap-3">
           <Button asChild><Link to="/app/catalog">View in Inventory</Link></Button>
-          <Button variant="outline" className="border-white/15 text-white" asChild>
+          <Button variant="outline" asChild>
             <a href="/api/docs">Read API docs</a>
           </Button>
         </div>
       </section>
 
-      <section className="section-wrap py-20 border-t border-white/5">
-        <h2 className="text-3xl font-semibold tracking-tight text-white mb-10">FAQ</h2>
-        <dl className="space-y-6 max-w-3xl">
+      <section className="section-wrap border-t border-border py-20">
+        <SectionHeader title="FAQ" className="mb-10" />
+        <dl className="max-w-3xl space-y-6">
           {FAQ.map((item) => (
-            <div key={item.q} className="border-b border-white/10 pb-6 last:border-0">
-              <dt className="font-medium text-white">{item.q}</dt>
-              <dd className="mt-2 text-sm text-white/50 leading-relaxed">{item.a}</dd>
+            <div key={item.q} className="border-b border-border/60 pb-6 last:border-0">
+              <dt className="font-medium text-foreground">{item.q}</dt>
+              <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.a}</dd>
             </div>
           ))}
         </dl>
       </section>
 
-      <footer className="border-t border-white/5 bg-[var(--surface-1)]">
-        <div className="section-wrap py-12 grid sm:grid-cols-2 md:grid-cols-4 gap-8 text-sm">
+      <footer className="border-t border-border bg-muted/10">
+        <div className="section-wrap grid gap-8 py-12 text-sm sm:grid-cols-2 md:grid-cols-4">
           <div>
             <Logo showWordmark className="mb-3" />
-            <p className="text-white/40 text-xs">Global SQLite routing platform.</p>
+            <p className="text-xs text-muted-foreground">Global PostgreSQL routing platform.</p>
           </div>
           <div>
-            <p className="font-medium mb-3 text-white">Product</p>
-            <ul className="space-y-2 text-white/50">
-              <li><Link to="/app" className="hover:text-white">Console</Link></li>
-              <li><a href="#pricing" className="hover:text-white">Pricing</a></li>
-              <li><Link to="/status" className="hover:text-white">Status</Link></li>
+            <p className="mb-3 font-medium text-foreground">Product</p>
+            <ul className="space-y-2 text-muted-foreground">
+              <li><Link to="/app" className="hover:text-foreground">Console</Link></li>
+              <li><a href="#pricing" className="hover:text-foreground">Pricing</a></li>
+              <li><Link to="/status" className="hover:text-foreground">Status</Link></li>
             </ul>
           </div>
           <div>
-            <p className="font-medium mb-3 text-white">Developers</p>
-            <ul className="space-y-2 text-white/50">
-              <li><a href="/api/docs" className="hover:text-white">API reference</a></li>
+            <p className="mb-3 font-medium text-foreground">Developers</p>
+            <ul className="space-y-2 text-muted-foreground">
+              <li><a href="/api/docs" className="hover:text-foreground">API reference</a></li>
             </ul>
           </div>
           <div>
-            <p className="font-medium mb-3 text-white">Company</p>
-            <ul className="space-y-2 text-white/50">
-              <li><a href="mailto:hello@globecloud.dev" className="hover:text-white">Contact</a></li>
+            <p className="mb-3 font-medium text-foreground">Company</p>
+            <ul className="space-y-2 text-muted-foreground">
+              <li><a href="mailto:hello@globecloud.dev" className="hover:text-foreground">Contact</a></li>
             </ul>
           </div>
         </div>
-        <div className="section-wrap pb-8 text-xs text-white/35 text-center">
+        <div className="section-wrap pb-8 text-center text-xs text-muted-foreground">
           {health && <p>System {health.status === "ok" ? "operational" : "degraded"} · GlobeCloud</p>}
         </div>
       </footer>
-    </ProductShell>
+    </CinematicShell>
   );
 }

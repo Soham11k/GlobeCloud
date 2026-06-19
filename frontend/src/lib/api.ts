@@ -137,6 +137,7 @@ export type RouterMetric = {
   error_rate?: number;
   is_local?: boolean;
   peer_url?: string | null;
+  probe_mode?: "http" | "local" | "estimated" | "unavailable" | string;
 };
 
 export type MetricsInfo = {

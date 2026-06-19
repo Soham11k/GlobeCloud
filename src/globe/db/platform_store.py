@@ -10,13 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from globe.auth.passwords import hash_password, verify_password
-from globe.auth.tokens import hash_token, new_refresh_token, new_user_id
+from globe.auth.tokens import decode_invite_token, hash_token, new_refresh_token, new_user_id
 from globe.db.engine import get_platform_session
 from globe.db.platform_models import (
     ApiKey,
     AuditEvent,
     OAuthAccount,
     Organization,
+    OrganizationInvite,
     OrganizationMember,
     RefreshToken,
     User as UserModel,
@@ -99,7 +100,83 @@ class PlatformStore:
             membership = self._primary_membership(session, row.id)
             return self._row_to_user(row, membership)
 
-    def create_user(self, email: str, password: str, name: str = "") -> User:
+    def _unique_org_slug(self, session: Session, base_slug: str) -> str:
+        slug = base_slug
+        n = 1
+        while session.scalar(select(Organization).where(Organization.slug == slug)):
+            slug = f"{base_slug}-{n}"
+            n += 1
+        return slug
+
+    def _org_name_for_user(self, name: str, email: str) -> str:
+        label = name.strip() or email.split("@")[0]
+        return f"{label}'s workspace"
+
+    def _create_org_for_user(self, session: Session, org_name: str, user_id: str) -> OrganizationMember:
+        base_slug = _slugify(org_name)
+        slug = self._unique_org_slug(session, base_slug)
+        org = Organization(id=str(uuid.uuid4()), name=org_name, slug=slug)
+        session.add(org)
+        session.flush()
+        membership = OrganizationMember(
+            id=str(uuid.uuid4()),
+            organization_id=org.id,
+            user_id=user_id,
+            role="owner",
+        )
+        session.add(membership)
+        session.flush()
+        return membership
+
+    def _membership_from_invite(
+        self, session: Session, invite_token: str, user_id: str, email: str
+    ) -> OrganizationMember:
+        payload = decode_invite_token(invite_token)
+        if not payload:
+            raise ValueError("Invalid or expired invite")
+        invite_email = (payload.get("email") or "").strip().lower()
+        if invite_email != email.strip().lower():
+            raise ValueError("Invite email does not match signup email")
+        org_id = payload.get("org_id")
+        role = payload.get("role") or "member"
+        if not org_id:
+            raise ValueError("Invalid or expired invite")
+        now = datetime.now(timezone.utc)
+        invite = session.scalar(
+            select(OrganizationInvite).where(
+                OrganizationInvite.organization_id == org_id,
+                OrganizationInvite.email == invite_email,
+                OrganizationInvite.token_hash == hash_token(invite_token),
+                OrganizationInvite.expires_at > now,
+            )
+        )
+        if not invite:
+            raise ValueError("Invalid or expired invite")
+        org = session.get(Organization, org_id)
+        if not org:
+            raise ValueError("Invalid or expired invite")
+        existing = session.scalar(
+            select(OrganizationMember).where(
+                OrganizationMember.organization_id == org_id,
+                OrganizationMember.user_id == user_id,
+            )
+        )
+        if existing:
+            raise ValueError("Already a member of this organization")
+        membership = OrganizationMember(
+            id=str(uuid.uuid4()),
+            organization_id=org_id,
+            user_id=user_id,
+            role=role,
+        )
+        session.add(membership)
+        session.delete(invite)
+        session.flush()
+        return membership
+
+    def create_user(
+        self, email: str, password: str, name: str = "", invite_token: str | None = None
+    ) -> User:
         email = email.strip().lower()
         if self.get_user_by_email(email):
             raise ValueError("Email already registered")
@@ -115,20 +192,12 @@ class PlatformStore:
                 created_at=now,
             )
             session.add(user)
-            org = session.scalar(select(Organization).where(Organization.slug == "default"))
-            if org is None:
-                org = Organization(id=str(uuid.uuid4()), name="Default", slug="default")
-                session.add(org)
-                session.flush()
-            session.add(
-                OrganizationMember(
-                    id=str(uuid.uuid4()),
-                    organization_id=org.id,
-                    user_id=user_id,
-                    role="owner",
-                )
-            )
             session.flush()
+            if invite_token:
+                self._membership_from_invite(session, invite_token, user_id, email)
+            else:
+                org_name = self._org_name_for_user(name, email)
+                self._create_org_for_user(session, org_name, user_id)
             membership = self._primary_membership(session, user_id)
             return self._row_to_user(user, membership)
 
@@ -190,6 +259,7 @@ class PlatformStore:
         provider_user_id: str,
         email: str,
         name: str,
+        invite_token: str | None = None,
     ) -> User:
         with get_platform_session() as session:
             oauth = session.scalar(
@@ -217,19 +287,12 @@ class PlatformStore:
                     created_at=datetime.now(timezone.utc),
                 )
                 session.add(user)
-                org = session.scalar(select(Organization).where(Organization.slug == "default"))
-                if org is None:
-                    org = Organization(id=str(uuid.uuid4()), name="Default", slug="default")
-                    session.add(org)
-                    session.flush()
-                session.add(
-                    OrganizationMember(
-                        id=str(uuid.uuid4()),
-                        organization_id=org.id,
-                        user_id=user.id,
-                        role="owner",
-                    )
-                )
+                session.flush()
+                if invite_token and email:
+                    self._membership_from_invite(session, invite_token, user.id, email)
+                else:
+                    org_name = self._org_name_for_user(name, email or user.email)
+                    self._create_org_for_user(session, org_name, user.id)
             session.add(
                 OAuthAccount(
                     id=str(uuid.uuid4()),
@@ -269,6 +332,19 @@ class PlatformStore:
                 "label": key.label,
             }
 
+    def verify_email(self, user_id: str) -> None:
+        with get_platform_session() as session:
+            user = session.get(UserModel, user_id)
+            if user:
+                user.email_verified = True
+
+    def set_password(self, user_id: str, password: str) -> None:
+        with get_platform_session() as session:
+            user = session.get(UserModel, user_id)
+            if not user:
+                raise ValueError("User not found")
+            user.password_hash = hash_password(password)
+
     def log_audit(
         self,
         org_id: str,
@@ -293,11 +369,7 @@ class PlatformStore:
     def create_organization(self, name: str, owner_user_id: str) -> Organization:
         with get_platform_session() as session:
             base_slug = _slugify(name)
-            slug = base_slug
-            n = 1
-            while session.scalar(select(Organization).where(Organization.slug == slug)):
-                slug = f"{base_slug}-{n}"
-                n += 1
+            slug = self._unique_org_slug(session, base_slug)
             org = Organization(id=str(uuid.uuid4()), name=name, slug=slug)
             session.add(org)
             session.flush()

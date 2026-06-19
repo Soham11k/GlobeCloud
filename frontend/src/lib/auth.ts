@@ -9,6 +9,8 @@ export type AuthUser = {
   name: string;
   email_verified: boolean;
   has_password: boolean;
+  org_id?: string;
+  org_role?: string;
 };
 
 export function hydrateAuthFromStorage(): void {
@@ -58,13 +60,19 @@ export async function login(email: string, password: string): Promise<AuthUser> 
 export async function register(
   email: string,
   password: string,
-  name: string
+  name: string,
+  inviteToken?: string
 ): Promise<AuthUser> {
   const res = await fetch("/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({
+      email,
+      password,
+      name,
+      invite_token: inviteToken || "",
+    }),
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));
@@ -118,6 +126,42 @@ export async function getSession(): Promise<AuthUser | null> {
     if (me) return me;
   }
   return refreshSession();
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  const res = await fetch("/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(typeof detail.detail === "string" ? detail.detail : "Request failed");
+  }
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  const res = await fetch("/auth/verify-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(typeof detail.detail === "string" ? detail.detail : "Verification failed");
+  }
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  const res = await fetch("/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(typeof detail.detail === "string" ? detail.detail : "Reset failed");
+  }
 }
 
 export function oauthUrl(provider: "google" | "github"): string {

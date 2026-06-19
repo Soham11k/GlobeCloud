@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -26,6 +27,7 @@ from globe.observability.metrics import setup_prometheus
 from globe.observability.sampler import MetricsSampler, observability_path
 from globe.observability.sentry import init_sentry
 from globe.observability.store import ObservabilityStore
+from globe.routing.geo_router import GeoRouter
 from globe.routing.geo_router import GeoRouter
 
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
@@ -113,6 +115,34 @@ def _bootstrap_databases(app: FastAPI) -> None:
             db.bootstrap()
 
 
+async def _gateway_metrics_loop(router: GeoRouter, observ: ObservabilityStore) -> None:
+    """Background sampler on gateway — persists probe latencies for /metrics/history."""
+    while True:
+        try:
+            await router.refresh_probes()
+            latencies: list[float] = []
+            for probe in router.snapshot():
+                ms = probe.latency_ms if probe.latency_ms != float("inf") else 9999.0
+                observ.record_metric(
+                    "latency_ms",
+                    ms,
+                    region_id=probe.region_id,
+                    labels={"healthy": probe.healthy, "circuit": probe.circuit.value},
+                )
+                if probe.healthy and probe.latency_ms != float("inf"):
+                    latencies.append(probe.latency_ms)
+            if latencies:
+                observ.record_metric(
+                    "latency_ms",
+                    sum(latencies) / len(latencies),
+                    region_id=None,
+                    labels={"aggregate": "fleet_avg"},
+                )
+        except Exception:
+            pass
+        await asyncio.sleep(30)
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     init_sentry()
@@ -152,12 +182,28 @@ def create_app() -> FastAPI:
             local_region_id="",
             peer_clients=peers,
         )
-        api = build_gateway_router(proxy, router)
+        data_dir = Path(settings.data_dir)
+        observ = ObservabilityStore(observability_path(data_dir))
+        app.state.observ = observ
+        api = build_gateway_router(proxy, router, observ)
         app.include_router(api)
 
         @app.on_event("startup")
         async def gateway_startup() -> None:
             _bootstrap_databases(app)
+            app.state._gateway_metrics_task = asyncio.create_task(
+                _gateway_metrics_loop(router, observ)
+            )
+
+        @app.on_event("shutdown")
+        async def gateway_shutdown() -> None:
+            task = getattr(app.state, "_gateway_metrics_task", None)
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
 
         _mount_static(app)
         return app

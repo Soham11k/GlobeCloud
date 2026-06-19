@@ -16,11 +16,12 @@ except ImportError:  # pragma: no cover
 
 
 def _pgvector_column():
-    """pgvector only works on PostgreSQL — use Text for SQLite dev."""
+    """pgvector requires the Postgres extension — use Text in dev/SQLite."""
     try:
         from globe.config import get_settings
 
-        if get_settings().uses_sqlite or Vector is None:
+        settings = get_settings()
+        if settings.uses_sqlite or settings.is_development or Vector is None:
             return mapped_column(Text, nullable=True)
         return mapped_column(Vector(1536), nullable=True)
     except Exception:

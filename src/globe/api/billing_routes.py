@@ -58,12 +58,14 @@ def build_billing_router() -> APIRouter:
         org_id = user.get("org_id") if user else None
         if not org_id:
             raise HTTPException(status_code=400, detail="No organization")
+        customer_id = None
         with get_platform_session() as session:
             org = session.get(Organization, org_id)
             if not org or not org.stripe_customer_id:
                 raise HTTPException(status_code=400, detail="No Stripe customer")
-            base = settings.oauth_redirect_base_url.rstrip("/")
-            url = stripe_svc.create_portal_session(org.stripe_customer_id, f"{base}/app/settings/billing")
+            customer_id = org.stripe_customer_id
+        base = settings.oauth_redirect_base_url.rstrip("/")
+        url = stripe_svc.create_portal_session(customer_id, f"{base}/app/settings/billing")
         if not url:
             raise HTTPException(status_code=500, detail="Portal session failed")
         return {"portal_url": url}
@@ -73,18 +75,31 @@ def build_billing_router() -> APIRouter:
         user = await get_current_user(request)
         org_id = user.get("org_id") if user else None
         if not org_id:
-            return {"plan_tier": "none", "status": "inactive"}
+            return {"plan_tier": "none", "status": "inactive", "period_end": None, "stripe_configured": stripe_svc.enabled}
         with get_platform_session() as session:
-            org = session.get(Organization, org_id)
-            sub = session.scalar(
-                select(Subscription)
+            org_row = session.execute(
+                select(Organization.plan_tier, Organization.stripe_customer_id).where(
+                    Organization.id == org_id
+                )
+            ).one_or_none()
+            sub_row = session.execute(
+                select(Subscription.status, Subscription.period_end)
                 .where(Subscription.organization_id == org_id)
                 .order_by(Subscription.period_end.desc())
+                .limit(1)
+            ).one_or_none()
+            plan_tier = org_row.plan_tier if org_row else "starter"
+            status_str = sub_row.status if sub_row else "inactive"
+            period_end_iso = (
+                sub_row.period_end.isoformat() if sub_row and sub_row.period_end else None
             )
+            has_stripe_customer = bool(org_row and org_row.stripe_customer_id)
         return {
-            "plan_tier": org.plan_tier if org else "starter",
-            "status": sub.status if sub else "inactive",
-            "period_end": sub.period_end.isoformat() if sub and sub.period_end else None,
+            "plan_tier": plan_tier,
+            "status": status_str,
+            "period_end": period_end_iso,
+            "stripe_configured": stripe_svc.enabled,
+            "has_stripe_customer": has_stripe_customer,
         }
 
     @router.post("/webhook")

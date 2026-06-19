@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/useAuth";
+import { Button } from "@/components/ui/button";
 
 export function GuestBanner() {
   const { isAuthenticated, loading } = useAuth();
@@ -7,16 +8,13 @@ export function GuestBanner() {
   if (loading || isAuthenticated) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--gc-border)] bg-[var(--gc-accent-dim)] px-4 py-2 md:px-6">
-      <p className="console-mono text-[10px] text-[var(--gc-muted)]">
-        Browsing as guest — sign in to create orders, edit catalog, or run the agent
+    <div className="glass flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-2.5 md:px-6">
+      <p className="text-sm text-muted-foreground">
+        You&apos;re browsing as a guest. Sign in to place orders, edit catalog, and use the agent.
       </p>
-      <Link
-        to="/login"
-        className="console-mono text-[10px] font-medium text-[var(--gc-accent)] hover:underline shrink-0"
-      >
-        Sign in →
-      </Link>
+      <Button variant="outline" size="sm" asChild className="shrink-0">
+        <Link to="/signup">Create free account</Link>
+      </Button>
     </div>
   );
 }

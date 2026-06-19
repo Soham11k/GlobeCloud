@@ -39,12 +39,23 @@ async def get_current_user(request: Request) -> Optional[dict]:
     return None
 
 
+_PUBLIC_ALWAYS = ("/health",)
+
+
 def _is_public_get(path: str, method: str) -> bool:
     if method != "GET":
         return False
     if not path.startswith("/api/v1"):
         return False
-    return any(path.rstrip("/").endswith(suffix) for suffix in _PUBLIC_SUFFIXES)
+    normalized = path.rstrip("/")
+    return any(normalized.endswith(suffix) for suffix in _PUBLIC_SUFFIXES)
+
+
+def _is_ops_health_check(path: str, method: str) -> bool:
+    if method != "GET" or not path.startswith("/api/v1"):
+        return False
+    normalized = path.rstrip("/")
+    return any(normalized.endswith(suffix) for suffix in _PUBLIC_ALWAYS)
 
 
 async def require_authenticated(request: Request) -> None:
@@ -84,6 +95,10 @@ async def require_api_access(
         return
 
     settings = get_settings()
+    if settings.globe_public_read and _is_public_get(path, request.method):
+        return
+    if _is_ops_health_check(path, request.method):
+        return
     if not settings.is_production and _is_public_get(path, request.method):
         return
 

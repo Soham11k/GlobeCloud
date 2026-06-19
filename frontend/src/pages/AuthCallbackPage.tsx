@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { setAccessToken } from "@/lib/auth";
+import { CinematicShell } from "@/components/layout/CinematicShell";
+import { LoadingState } from "@/components/layout/LoadingState";
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -17,8 +19,11 @@ export function AuthCallbackPage() {
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--surface-0,#03030a)] text-sm text-muted-foreground">
-      Completing sign-in…
-    </div>
+    <CinematicShell className="flex min-h-screen items-center justify-center">
+      <div className="glass-panel px-8 py-6">
+        <LoadingState rows={1} />
+        <p className="mt-4 text-center text-sm text-muted-foreground">Completing sign-in…</p>
+      </div>
+    </CinematicShell>
   );
 }
