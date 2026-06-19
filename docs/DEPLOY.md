@@ -168,8 +168,22 @@ See [README.md](../README.md) for local and Docker regional simulation.
 Push to `main` triggers [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml):
 
 1. Build React frontend + run smoke test
-2. Deploy 4 Fly apps (requires `FLY_API_TOKEN`, `GLOBECLOUD_API_KEY`, `GLOBECLOUD_REPLICATION_SECRET` GitHub secrets)
+2. Deploy 4 Fly apps when `FLY_API_TOKEN` is configured (otherwise deploy is skipped with a warning)
 3. Post-deploy smoke test against `https://globecloud.fly.dev`
+
+### GitHub secrets (Settings → Secrets and variables → Actions)
+
+| Secret | Required | Notes |
+|--------|----------|-------|
+| `FLY_API_TOKEN` | **Yes** (for deploy) | `fly tokens create deploy -x 999999h` |
+| `GLOBECLOUD_API_KEY` | No | Auto-generated on first deploy if omitted |
+| `GLOBECLOUD_REPLICATION_SECRET` | No | Auto-generated if omitted |
+| `GLOBECLOUD_JWT_SECRET` | No | Auto-generated on gateway deploy if omitted |
+| `OPENAI_API_KEY` | No | Enables live agent on regional apps |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | No | OAuth sign-in on gateway |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | No | OAuth sign-in on gateway |
+
+After adding `FLY_API_TOKEN`, re-run the latest **Deploy GlobeCloud** workflow from the Actions tab.
 
 ---
 

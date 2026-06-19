@@ -17,6 +17,13 @@ if ! command -v flyctl >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! flyctl auth whoami >/dev/null 2>&1; then
+  echo "ERROR: Fly.io auth failed."
+  echo "  Local:  fly auth login"
+  echo "  CI:     add FLY_API_TOKEN secret (fly tokens create deploy -x 999999h)"
+  exit 1
+fi
+
 GATEWAY_APP="${GATEWAY_APP:-globecloud}"
 US_APP="${US_APP:-globecloud-us}"
 EU_APP="${EU_APP:-globecloud-eu}"

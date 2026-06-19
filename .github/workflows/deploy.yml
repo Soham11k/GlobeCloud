@@ -75,16 +75,37 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Verify Fly.io credentials
+        id: fly_ready
+        run: |
+          if [ -z "${FLY_API_TOKEN:-}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Fly deploy skipped::Add repository secret FLY_API_TOKEN. Create one with: fly tokens create deploy -x 999999h"
+            exit 0
+          fi
+          if ! flyctl auth whoami; then
+            echo "::error title=Invalid FLY_API_TOKEN::Create a new deploy token with: fly tokens create deploy -x 999999h"
+            exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy global fleet
+        if: steps.fly_ready.outputs.ready == 'true'
         env:
           API_KEY: ${{ secrets.GLOBECLOUD_API_KEY }}
           REPLICATION_SECRET: ${{ secrets.GLOBECLOUD_REPLICATION_SECRET }}
+          JWT_SECRET: ${{ secrets.GLOBECLOUD_JWT_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
         run: |
           chmod +x scripts/deploy-global-fly.sh
           ./scripts/deploy-global-fly.sh
 
       - name: Post-deploy smoke test
+        if: steps.fly_ready.outputs.ready == 'true'
         env:
           API_KEY: ${{ secrets.GLOBECLOUD_API_KEY }}
           BASE_URL: https://globecloud.fly.dev
