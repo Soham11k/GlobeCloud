@@ -38,8 +38,8 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <div className={cn("glass-panel overflow-hidden", className)}>
-      <div className="flex flex-row items-center justify-between border-b border-border/60 px-5 py-4">
+    <div className={cn("console-panel overflow-hidden", className)}>
+      <div className="flex flex-row items-center justify-between border-b border-border/40 px-5 py-4">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         {action}
       </div>
@@ -50,7 +50,7 @@ export function Panel({
 
 export function Kpi({ label, value, sub, highlight }: { label: string; value: ReactNode; sub?: string; highlight?: boolean }) {
   return (
-    <div className={cn("glass-panel p-5", highlight && "glow-ring border-accent/30")}>
+    <div className={cn("console-panel p-5", highlight && "border-accent/30 ring-1 ring-accent/20")}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
       {sub && <p className="mt-1 data-mono text-xs text-muted-foreground">{sub}</p>}

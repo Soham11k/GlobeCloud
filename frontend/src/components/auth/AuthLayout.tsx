@@ -1,19 +1,13 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Briefcase, ChevronDown, Code2, Globe2, Network } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { CinematicShell } from "@/components/layout/CinematicShell";
+import { SiteIconRail } from "@/components/layout/SiteIconRail";
 import { GlobeScene3DLazy } from "@/components/globe/GlobeScene3DLazy";
 import { LivePingRail } from "@/components/layout/LivePingRail";
 import { AuthOAuth } from "@/components/auth/AuthOAuth";
 import { useLiveMetrics, useProduct, useRegions } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
-
-const RAIL_LINKS = [
-  { to: "/", icon: Globe2, label: "Home" },
-  { to: "/status", icon: Network, label: "Status" },
-  { to: "/api/docs", icon: Code2, label: "API docs", external: true },
-  { to: "/app", icon: Briefcase, label: "Console" },
-] as const;
 
 type AuthMode = "login" | "signup" | "plain";
 
@@ -138,27 +132,6 @@ function AuthHero() {
   );
 }
 
-function IconRail() {
-  return (
-    <aside className="auth-rail hidden w-14 shrink-0 flex-col items-center gap-1 border-r border-border/40 py-6 sm:flex">
-      {RAIL_LINKS.map(({ to, icon: Icon, label, ...rest }) => {
-        const external = "external" in rest && rest.external;
-        const cls =
-          "flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground";
-        return external ? (
-          <a key={to} href={to} target="_blank" rel="noopener noreferrer" className={cls} title={label}>
-            <Icon className="h-[18px] w-[18px]" />
-          </a>
-        ) : (
-          <Link key={to} to={to} className={cls} title={label}>
-            <Icon className="h-[18px] w-[18px]" />
-          </Link>
-        );
-      })}
-    </aside>
-  );
-}
-
 export function AuthLayout({
   children,
   title,
@@ -168,13 +141,14 @@ export function AuthLayout({
   showOAuth = false,
   inviteToken,
 }: Props) {
+  const location = useLocation();
   const isSplit = mode === "login" || mode === "signup";
 
   if (!isSplit) {
     return (
       <CinematicShell showPingRail={false}>
         <div className="flex min-h-screen">
-          <IconRail />
+          <SiteIconRail activePath={location.pathname} />
           <div className="flex flex-1 items-center justify-center px-6 py-12">
             <div className="auth-card w-full max-w-md p-8">
               <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
@@ -192,7 +166,7 @@ export function AuthLayout({
     <CinematicShell showPingRail={false} className="min-h-screen">
       <div className="flex min-h-screen flex-col">
         <div className="flex min-h-0 flex-1">
-          <IconRail />
+          <SiteIconRail activePath={location.pathname} className="hidden sm:flex" />
           <div className="flex min-w-0 flex-1 flex-col lg:flex-row">
             <AuthHero />
 

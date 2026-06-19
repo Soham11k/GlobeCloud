@@ -6,21 +6,44 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import HTTPException, Request
+from itsdangerous import BadSignature, BadTimeSignature, URLSafeTimedSerializer
 
 from globe.config import get_settings
 
-
-def _state_token() -> str:
-    return secrets.token_urlsafe(24)
+_OAUTH_STATE_MAX_AGE = 600
 
 
-def google_authorize_url(request: Request) -> str:
+def _state_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(get_settings().jwt_secret_key, salt="globe-oauth-state")
+
+
+def create_oauth_state(provider: str, invite: Optional[str] = None) -> str:
+    payload: dict[str, str] = {
+        "p": provider,
+        "n": secrets.token_urlsafe(16),
+    }
+    if invite:
+        payload["i"] = invite[:512]
+    return _state_serializer().dumps(payload)
+
+
+def parse_oauth_state(state: Optional[str], provider: str) -> dict[str, str]:
+    if not state:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    try:
+        data = _state_serializer().loads(state, max_age=_OAUTH_STATE_MAX_AGE)
+    except (BadSignature, BadTimeSignature) as exc:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state") from exc
+    if not isinstance(data, dict) or data.get("p") != provider:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    return data
+
+
+def google_authorize_url(request: Request, invite: Optional[str] = None) -> str:
     settings = get_settings()
     if not settings.google_client_id:
         raise HTTPException(status_code=503, detail="Google OAuth not configured")
-    state = _state_token()
-    request.session["oauth_state"] = state
-    request.session["oauth_provider"] = "google"
+    state = create_oauth_state("google", invite=invite)
     redirect_uri = f"{settings.oauth_redirect_base_url.rstrip('/')}/auth/oauth/callback/google"
     params = urlencode(
         {
@@ -36,13 +59,11 @@ def google_authorize_url(request: Request) -> str:
     return f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
 
 
-def github_authorize_url(request: Request) -> str:
+def github_authorize_url(request: Request, invite: Optional[str] = None) -> str:
     settings = get_settings()
     if not settings.github_client_id:
         raise HTTPException(status_code=503, detail="GitHub OAuth not configured")
-    state = _state_token()
-    request.session["oauth_state"] = state
-    request.session["oauth_provider"] = "github"
+    state = create_oauth_state("github", invite=invite)
     redirect_uri = f"{settings.oauth_redirect_base_url.rstrip('/')}/auth/oauth/callback/github"
     params = urlencode(
         {
@@ -53,12 +74,6 @@ def github_authorize_url(request: Request) -> str:
         }
     )
     return f"https://github.com/login/oauth/authorize?{params}"
-
-
-def _verify_state(request: Request, state: Optional[str]) -> None:
-    expected = request.session.pop("oauth_state", None)
-    if not expected or not state or expected != state:
-        raise HTTPException(status_code=400, detail="Invalid OAuth state")
 
 
 async def exchange_google_code(request: Request, code: str) -> tuple[str, str, str]:

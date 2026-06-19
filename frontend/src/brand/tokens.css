@@ -25,6 +25,8 @@
   --tier-pro: #22c55e;
   --tier-enterprise: #18181b;
   --tier-addon: #71717a;
+  --console-border: rgba(255, 255, 255, 0.06);
+  --console-nav-width: 13.5rem;
 }
 
 .dark {

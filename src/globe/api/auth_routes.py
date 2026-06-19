@@ -11,6 +11,7 @@ from globe.auth.oauth import (
     exchange_google_code,
     github_authorize_url,
     google_authorize_url,
+    parse_oauth_state,
 )
 from globe.auth.tokens import create_access_token, create_email_token, decode_email_token
 from globe.config import get_settings
@@ -169,13 +170,11 @@ def build_auth_router() -> APIRouter:
 
     @router.get("/oauth/{provider}")
     async def oauth_start(provider: str, request: Request) -> RedirectResponse:
-        invite = request.query_params.get("invite", "").strip()
-        if invite:
-            request.session["oauth_invite"] = invite
+        invite = request.query_params.get("invite", "").strip() or None
         if provider == "google":
-            return RedirectResponse(google_authorize_url(request), status_code=302)
+            return RedirectResponse(google_authorize_url(request, invite=invite), status_code=302)
         if provider == "github":
-            return RedirectResponse(github_authorize_url(request), status_code=302)
+            return RedirectResponse(github_authorize_url(request, invite=invite), status_code=302)
         raise HTTPException(status_code=404, detail="Unknown provider")
 
     @router.get("/oauth/callback/{provider}")
@@ -190,7 +189,7 @@ def build_auth_router() -> APIRouter:
             raise HTTPException(status_code=400, detail=error)
         if not code:
             raise HTTPException(status_code=400, detail="Missing authorization code")
-        _verify_state(request, state)
+        state_data = parse_oauth_state(state, provider)
         settings = get_settings()
         store = _get_store(request)
 
@@ -204,8 +203,7 @@ def build_auth_router() -> APIRouter:
         if not provider_user_id:
             raise HTTPException(status_code=400, detail="OAuth profile missing user id")
 
-        invite = request.session.pop("oauth_invite", None)
-        invite = invite.strip() if invite else None
+        invite = (state_data.get("i") or "").strip() or None
         user = store.get_or_create_oauth_user(
             provider, provider_user_id, email, name, invite_token=invite or None
         )
@@ -270,9 +268,3 @@ def build_auth_router() -> APIRouter:
         return {"ok": True}
 
     return router
-
-
-def _verify_state(request: Request, state: Optional[str]) -> None:
-    expected = request.session.pop("oauth_state", None)
-    if not expected or not state or expected != state:
-        raise HTTPException(status_code=400, detail="Invalid OAuth state")
