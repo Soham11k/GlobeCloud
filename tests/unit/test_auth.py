@@ -22,9 +22,17 @@ def test_jwt_access_token():
 
 def test_production_requires_jwt_secret(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
-    monkeypatch.delenv("JWT_SECRET", raising=False)
+    monkeypatch.setenv("JWT_SECRET", "")
     get_settings.cache_clear()
     settings = get_settings()
     with pytest.raises(RuntimeError):
         _ = settings.jwt_secret_key
+    get_settings.cache_clear()
+
+
+def test_development_uses_default_jwt_secret(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("JWT_SECRET", "")
+    get_settings.cache_clear()
+    assert "dev" in get_settings().jwt_secret_key.lower()
     get_settings.cache_clear()
