@@ -31,7 +31,7 @@ export function ActivityTimeline({ items, empty = "No activity yet" }: { items: 
               aria-hidden
             />
           )}
-          <span className="relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-accent bg-background" />
+          <span className="relative z-10 mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="font-mono text-[11px] text-muted-foreground">{relativeTime(item.ts)}</span>

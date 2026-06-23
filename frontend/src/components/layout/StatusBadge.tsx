@@ -1,11 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const dotColors = {
-  ok: "bg-success",
-  warn: "bg-warning",
-  err: "bg-danger",
-  off: "bg-muted-foreground/40",
+const labels = {
+  ok: "online",
+  warn: "slow",
+  err: "offline",
+  off: "—",
 };
 
 const badgeVariants = {
@@ -18,7 +18,13 @@ const badgeVariants = {
 export function StatusDot({ status }: { status: "ok" | "warn" | "err" | "off" }) {
   return (
     <span
-      className={cn("inline-block h-2 w-2 rounded-full shrink-0", dotColors[status])}
+      className={cn(
+        "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+        status === "err" && "bg-accent",
+        status === "warn" && "bg-muted-foreground",
+        status === "ok" && "bg-foreground",
+        status === "off" && "bg-border",
+      )}
       aria-hidden
     />
   );
@@ -36,7 +42,7 @@ export function StatusBadge({
   return (
     <Badge variant={badgeVariants[status]} className={cn("gap-1.5", className)}>
       <StatusDot status={status} />
-      {label}
+      {label ?? labels[status]}
     </Badge>
   );
 }

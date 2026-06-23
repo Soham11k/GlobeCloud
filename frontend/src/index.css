@@ -1,44 +1,48 @@
-@import "@fontsource/geist-sans/400.css";
-@import "@fontsource/geist-sans/500.css";
-@import "@fontsource/geist-sans/600.css";
-@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
 @import "./brand/tokens.css";
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-background: #03030a;
-  --color-foreground: #fafafa;
-  --color-card: rgba(24, 24, 27, 0.72);
-  --color-card-foreground: #fafafa;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-accent: #5b52ff;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-background: #000000;
+  --color-foreground: #ffffff;
+  --color-card: #0c0c0c;
+  --color-card-foreground: #ffffff;
+  --color-muted: #141414;
+  --color-muted-foreground: #888888;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-accent: #d71921;
   --color-accent-foreground: #ffffff;
-  --color-success: #2dd4a0;
-  --color-warning: #f0a84a;
-  --color-danger: #f87171;
-  --color-chart-1: #5b52ff;
-  --color-chart-2: #2dd4a0;
-  --color-chart-3: #f0a84a;
-  --color-chart-4: #71717a;
-  --radius-lg: 0.75rem;
-  --radius-md: 0.5rem;
-  --radius-sm: 0.375rem;
+  --color-success: #ffffff;
+  --color-warning: #888888;
+  --color-danger: #d71921;
+  --color-chart-1: #d71921;
+  --color-chart-2: #ffffff;
+  --color-chart-3: #888888;
+  --color-chart-4: #444444;
+  --radius-lg: 0;
+  --radius-md: 0;
+  --radius-sm: 0;
 }
 
 .dark {
-  --color-background: #03030a;
-  --color-foreground: #fafafa;
-  --color-card: rgba(24, 24, 27, 0.72);
-  --color-card-foreground: #fafafa;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-accent: #7b75ff;
+  --color-background: #000000;
+  --color-foreground: #ffffff;
+  --color-card: #0c0c0c;
+  --color-card-foreground: #ffffff;
+  --color-muted: #141414;
+  --color-muted-foreground: #888888;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-accent: #d71921;
+  --color-accent-foreground: #ffffff;
 }
 
 @layer base {
@@ -49,36 +53,30 @@
     @apply scroll-smooth antialiased;
   }
   body {
-    @apply bg-background text-foreground font-sans min-h-screen transition-colors duration-300;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground font-sans min-h-screen text-[15px] leading-relaxed;
+    letter-spacing: -0.01em;
   }
-  h1, h2, h3 {
-    @apply tracking-tight;
+  h1, h2, h3, h4 {
+    @apply font-sans font-medium tracking-[-0.03em];
+  }
+  code, pre, kbd {
+    @apply font-mono text-[0.9em];
+  }
+  a:not([class]) {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+  }
+  a:not([class]):hover {
+    text-decoration-color: var(--nothing-red);
   }
 }
 
 @layer utilities {
-  .glass {
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-width: 1px;
-    border-style: solid;
-    background: var(--glass-bg);
-    border-color: var(--glass-border);
-  }
-  .glass-panel {
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-width: 1px;
-    border-style: solid;
-    border-radius: var(--radius-lg);
-    background: var(--glass-bg);
-    border-color: var(--glass-border);
-    box-shadow: var(--shadow-elevated-dark);
-  }
   .console-panel {
-    border: 1px solid var(--console-border);
-    border-radius: var(--radius-lg);
+    border: var(--hairline);
+    border-radius: 0;
     background: var(--surface-1);
   }
   .console-chrome {
@@ -86,117 +84,72 @@
     background: var(--surface-0);
   }
   .geo-viz-panel {
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(91, 82, 255, 0.08), var(--space-bg) 70%);
+    border: var(--hairline);
+    border-radius: 0;
+    background: var(--space-bg);
   }
   .auth-card {
-    --auth-card-bg: #0c0c14;
-    border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: var(--auth-card-bg);
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+    border-radius: 0;
+    border: var(--hairline);
+    background: var(--surface-0);
   }
   .auth-rail {
-    background: rgba(6, 6, 12, 0.95);
+    background: var(--surface-0);
+    border-right: var(--hairline);
   }
   .auth-tab {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 2.25rem;
-    border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 0.8125rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--color-muted-foreground);
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    border: none;
+    border-bottom: 2px solid transparent;
   }
   .auth-tab:hover {
     color: var(--color-foreground);
-    border-color: rgba(255, 255, 255, 0.22);
   }
   .auth-tab-active {
     color: var(--color-foreground);
-    border-color: rgba(255, 255, 255, 0.55);
-    background: rgba(255, 255, 255, 0.04);
+    border-bottom-color: var(--nothing-red);
+  }
+  .auth-tabs {
+    border-bottom: var(--hairline);
   }
   .auth-input {
     height: 2.75rem;
-    border-radius: 0.625rem;
-    border-color: rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.35);
+    border: var(--hairline);
+    background: transparent;
   }
   .auth-input:focus-visible {
-    border-color: rgba(91, 82, 255, 0.5);
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.35);
   }
   .auth-input-error {
-    border-color: rgba(248, 113, 113, 0.6) !important;
-  }
-  .auth-input-error:focus-visible {
-    border-color: rgba(248, 113, 113, 0.8) !important;
+    border-color: var(--nothing-red) !important;
   }
   .auth-submit-btn {
     height: 2.75rem;
-    border-radius: 0.625rem;
-    border-color: rgba(255, 255, 255, 0.55);
-    background: transparent;
-    font-weight: 500;
+    border: none;
+    background: var(--nothing-red);
+    color: #fff;
+    font-weight: 600;
   }
   .auth-submit-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.75);
+    background: #b8121c;
   }
   .auth-oauth-btn {
     height: 2.5rem;
-    border-radius: 0.625rem;
-    border-color: rgba(255, 255, 255, 0.12);
+    border: var(--hairline);
     background: transparent;
-    font-size: 0.8125rem;
   }
   .auth-oauth-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
-  }
-  .auth-hero-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 2.5rem;
-    padding: 0 1.25rem;
-    border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-foreground);
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .auth-hero-btn:hover {
-    border-color: rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--surface-2);
   }
   .cinematic-shell {
-    background: var(--space-bg);
-    min-height: 100vh;
-    color: var(--color-foreground);
-    position: relative;
-    overflow-x: hidden;
-  }
-  .cinematic-vignette {
-    pointer-events: none;
-    background: radial-gradient(
-      ellipse 80% 70% at 30% 50%,
-      transparent 0%,
-      rgba(3, 3, 10, 0.55) 55%,
-      var(--space-vignette) 100%
-    );
-  }
-  .glow-ring {
-    box-shadow: 0 0 0 1px var(--glass-border), var(--glow-accent);
-  }
-  .section-glow {
-    background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(91, 82, 255, 0.12), transparent 70%);
-  }
-  .page-shell {
     background: var(--space-bg);
     min-height: 100vh;
     color: var(--color-foreground);
@@ -211,14 +164,12 @@
     max-width: var(--content-max);
     @apply mx-auto w-full;
   }
-  .headline-accent {
-    @apply text-accent;
-  }
   .data-mono {
     @apply font-mono text-xs text-muted-foreground;
   }
-  .noise-bg {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  .dot-grid-bg {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+    background-size: 12px 12px;
   }
   .geo-healthy { color: var(--geo-healthy); }
   .geo-warn { color: var(--geo-warn); }

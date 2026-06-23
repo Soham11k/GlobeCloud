@@ -1,5 +1,5 @@
 import { useLiveMetrics } from "@/lib/hooks";
-import { StatusDot } from "@/components/layout/StatusBadge";
+import { DotLabel } from "@/components/brand/DotLabel";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,29 +14,15 @@ export function LivePingRail({ className, compact }: Props) {
   if (!router.length) return null;
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-4 overflow-x-auto font-mono text-[11px]",
-        className,
-      )}
-    >
-      <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-        <StatusDot status={router.every((r) => r.healthy) ? "ok" : "warn"} />
-        {!compact && "probes"}
-      </span>
-      {router.map((r) => (
-        <span
-          key={r.region_id}
-          className="shrink-0 tabular-nums"
-          title={[r.probe_mode, r.peer_url].filter(Boolean).join(" · ") || undefined}
-        >
-          <span className={r.healthy ? "text-[var(--geo-healthy)]" : "text-[var(--geo-error)]"}>
+    <div className={cn("flex items-center gap-4 overflow-x-auto text-xs text-muted-foreground", className)}>
+      {!compact && <DotLabel dot={false} className="shrink-0 tracking-[0.2em]">Probes</DotLabel>}
+      {router.map((r, i) => (
+        <span key={r.region_id} className="shrink-0 tabular-nums">
+          {i > 0 && <span className="mr-4 text-border">|</span>}
+          <span className={r.healthy ? "text-foreground" : "text-accent"}>
             {r.region_id}
           </span>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-foreground">
-            {r.latency_ms != null ? `${Math.round(r.latency_ms)}ms` : "—"}
-          </span>
+          <span className="ml-1 font-mono">{r.latency_ms != null ? `${Math.round(r.latency_ms)}ms` : "—"}</span>
         </span>
       ))}
     </div>

@@ -1,35 +1,39 @@
 :root {
-  --section-max: 72rem;
+  --section-max: 76rem;
   --content-max: 80rem;
   --sidebar-width: 15.5rem;
   --sidebar-width-collapsed: 4rem;
-  --header-height: 3.5rem;
-  --accent: #5b52ff;
-  --accent-muted: rgba(91, 82, 255, 0.12);
-  --accent-glow: rgba(91, 82, 255, 0.35);
-  --space-bg: #03030a;
-  --space-vignette: rgba(3, 3, 10, 0.92);
-  --glass-bg: rgba(9, 9, 11, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glow-accent: 0 0 40px rgba(91, 82, 255, 0.25);
-  --geo-healthy: #2dd4a0;
-  --geo-warn: #f0a84a;
-  --geo-error: #f87171;
-  --surface-0: #09090b;
-  --surface-1: #18181b;
-  --surface-2: #27272a;
-  --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-elevated-dark: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.35);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --tier-starter: #5b52ff;
-  --tier-pro: #22c55e;
-  --tier-enterprise: #18181b;
-  --tier-addon: #71717a;
-  --console-border: rgba(255, 255, 255, 0.06);
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --console-nav-width: 13.5rem;
+  --header-height: 3.75rem;
+  --nothing-red: #d71921;
+  --nothing-red-dim: rgba(215, 25, 33, 0.45);
+  --accent: #d71921;
+  --accent-muted: rgba(215, 25, 33, 0.12);
+  --accent-glow: transparent;
+  --space-bg: #000000;
+  --space-vignette: #000000;
+  --glass-bg: #000000;
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glow-accent: none;
+  --geo-healthy: #ffffff;
+  --geo-warn: #888888;
+  --geo-error: #d71921;
+  --surface-0: #000000;
+  --surface-1: #0c0c0c;
+  --surface-2: #141414;
+  --shadow-elevated: none;
+  --shadow-elevated-dark: none;
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --tier-starter: #ffffff;
+  --tier-pro: #d71921;
+  --tier-enterprise: #888888;
+  --tier-addon: #888888;
+  --console-border: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --console-nav-width: 14rem;
+  --hairline: 1px solid rgba(255, 255, 255, 0.1);
+  --link-color: #ffffff;
 }
 
 .dark {
-  --shadow-elevated: var(--shadow-elevated-dark);
+  --shadow-elevated: none;
 }

@@ -2,11 +2,11 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const variants = {
-  default: "bg-muted text-muted-foreground border-border",
-  success: "bg-success/15 text-success border-success/30",
-  warning: "bg-warning/15 text-warning border-warning/30",
-  danger: "bg-danger/15 text-danger border-danger/30",
-  accent: "bg-accent/15 text-accent border-accent/30",
+  default: "bg-muted text-muted-foreground border-transparent",
+  success: "bg-muted text-foreground border-transparent",
+  warning: "bg-muted text-muted-foreground border-transparent",
+  danger: "bg-[var(--accent-muted)] text-accent border-transparent",
+  accent: "bg-accent text-accent-foreground border-transparent",
 };
 
 export function Badge({
@@ -17,7 +17,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 font-mono text-[11px] tracking-wide",
         variants[variant],
         className
       )}

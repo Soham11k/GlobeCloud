@@ -60,8 +60,8 @@ export function DocsPage() {
                 type="button"
                 onClick={() => setSelectedId(doc.id)}
                 className={cn(
-                  "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                  active?.id === doc.id ? "bg-accent/12 text-accent" : "hover:bg-muted/50 text-muted-foreground",
+                  "w-full  px-3 py-2 text-left text-sm transition-colors",
+                  active?.id === doc.id ? "bg-foreground text-accent" : "hover:bg-muted text-muted-foreground",
                 )}
               >
                 {doc.title}

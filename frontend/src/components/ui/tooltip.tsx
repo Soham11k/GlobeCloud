@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export const TooltipProvider = TooltipPrimitive.Provider;
 
 export function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root delayDuration={200} {...props} />;
+  return <TooltipPrimitive.Root delayDuration={0} {...props} />;
 }
 
 export const TooltipTrigger = TooltipPrimitive.Trigger;
@@ -20,7 +20,7 @@ export function TooltipContent({
       <TooltipPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 rounded-md bg-card px-3 py-1.5 text-xs text-foreground shadow-md border border-border animate-in fade-in-0 zoom-in-95",
+          "z-50 rounded-none border border-border bg-background px-3 py-1.5 text-xs text-foreground",
           className
         )}
         {...props}

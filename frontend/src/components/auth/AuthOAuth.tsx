@@ -46,7 +46,7 @@ function OAuthSetupHint() {
     : base.replace("localhost", "127.0.0.1");
 
   return (
-    <div className="mt-3 rounded-lg border border-border/60 bg-muted/20 p-3 text-[11px] leading-relaxed text-muted-foreground">
+    <div className="mt-3  border border-foreground bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
       <p className="font-medium text-foreground">OAuth setup (one-time)</p>
       <ol className="mt-2 list-decimal space-y-1.5 pl-4">
         <li>

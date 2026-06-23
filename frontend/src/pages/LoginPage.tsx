@@ -60,11 +60,11 @@ export function LoginPage() {
       footer={
         <p className="mt-8 text-center text-sm text-muted-foreground">
           No account?{" "}
-          <Link to={signupLink} className="text-accent hover:underline">
+          <Link to={signupLink} className="underline">
             Create one
           </Link>
           {" · "}
-          <Link to="/app" className="text-accent hover:underline">
+          <Link to="/app" className="underline">
             Browse as guest
           </Link>
         </p>
@@ -94,7 +94,7 @@ export function LoginPage() {
           label={
             <span className="flex w-full items-center justify-between">
               Password
-              <Link to="/forgot-password" className="text-xs text-accent hover:underline">
+              <Link to="/forgot-password" className="text-xs underline">
                 Forgot?
               </Link>
             </span>

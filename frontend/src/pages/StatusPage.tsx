@@ -43,7 +43,7 @@ function UptimeBar({ samples }: { samples: { value: number; ts: string }[] }) {
           {[...Array(slots)].map((_, i) => (
             <div
               key={i}
-              className={cn("rounded-sm bg-muted", mobile ? "h-8 w-2 shrink-0" : "min-w-[2px] flex-1")}
+              className={cn(" bg-muted", mobile ? "h-8 w-2 shrink-0" : "min-w-[2px] flex-1")}
               style={{ opacity: 0.35 + (i % 5) * 0.06 }}
             />
           ))}
@@ -70,7 +70,7 @@ function UptimeBar({ samples }: { samples: { value: number; ts: string }[] }) {
               key={i}
               role="listitem"
               aria-label={label}
-              className={cn("rounded-sm", mobile ? "h-8 w-2 shrink-0" : "min-w-[2px] flex-1")}
+              className={cn("", mobile ? "h-8 w-2 shrink-0" : "min-w-[2px] flex-1")}
               style={{
                 backgroundColor: healthy ? "var(--geo-healthy)" : s ? "var(--geo-warn)" : "var(--muted)",
                 opacity: s ? 0.85 : 0.2,
@@ -153,18 +153,18 @@ export function StatusPage() {
                 : "Warming up — bars fill as live probes arrive (every 3s)."}
             </p>
           </div>
-          <div className="flex justify-between border-b border-border/60 py-2 text-sm">
+          <div className="flex justify-between border-b border-foreground py-2 text-sm">
             <span>API</span>
             <Badge variant={health?.status === "ok" ? "success" : "danger"}>{health?.status ?? "unknown"}</Badge>
           </div>
-          <div className="flex justify-between border-b border-border/60 py-2 text-sm">
+          <div className="flex justify-between border-b border-foreground py-2 text-sm">
             <span>Deployment</span>
             <span className="text-muted-foreground capitalize">
               {isGateway ? "gateway" : product?.deployment_mode ?? "—"}
             </span>
           </div>
           {isGateway && fleet && (
-            <div className="flex justify-between border-b border-border/60 py-2 text-sm">
+            <div className="flex justify-between border-b border-foreground py-2 text-sm">
               <span>Healthy regions</span>
               <span className="text-muted-foreground">
                 {fleet.healthy_regions}/{fleet.total_regions}
@@ -197,7 +197,7 @@ export function StatusPage() {
               : router.map((r) => (
                   <div
                     key={`${r.region_id}-${r.latency_ms}`}
-                    className="flex justify-between border-b border-border/60 py-2 text-sm last:border-0"
+                    className="flex justify-between border-b border-foreground py-2 text-sm last:border-0"
                   >
                     <span className="font-mono">{r.region_id}</span>
                     <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ export function StatusPage() {
         </div>
 
         <p className="pb-8 text-center text-xs text-muted-foreground">
-          <Link to="/" className="text-accent hover:underline">
+          <Link to="/" className="underline">
             ← Back to home
           </Link>
         </p>

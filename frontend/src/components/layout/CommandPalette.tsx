@@ -44,7 +44,7 @@ export function CommandPalette({
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
       <div className="fixed left-1/2 top-[15%] z-50 w-full max-w-lg -translate-x-1/2 px-4">
         <Command
-          className="rounded-xl border border-border bg-card shadow-2xl overflow-hidden"
+          className=" border border-border bg-card shadow-2xl overflow-hidden"
           shouldFilter
         >
           <Command.Input
@@ -63,8 +63,8 @@ export function CommandPalette({
                   key={to}
                   onSelect={() => run(() => navigate(to))}
                   className={cn(
-                    "flex cursor-pointer items-center rounded-md px-3 py-2 text-sm",
-                    "aria-selected:bg-accent/15 aria-selected:text-accent"
+                    "flex cursor-pointer items-center  px-3 py-2 text-sm",
+                    "aria-selected:bg-foreground aria-selected:text-accent"
                   )}
                 >
                   {label}
@@ -74,19 +74,19 @@ export function CommandPalette({
             <Command.Group heading="Actions" className="text-xs text-muted-foreground px-2 py-1 mt-2">
               <Command.Item
                 onSelect={() => run(onSync)}
-                className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm aria-selected:bg-accent/15"
+                className="flex cursor-pointer items-center  px-3 py-2 text-sm aria-selected:bg-foreground"
               >
                 Force replication sync
               </Command.Item>
               <Command.Item
                 onSelect={() => run(() => window.open("/api/docs", "_blank"))}
-                className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm aria-selected:bg-accent/15"
+                className="flex cursor-pointer items-center  px-3 py-2 text-sm aria-selected:bg-foreground"
               >
                 Open API documentation
               </Command.Item>
               <Command.Item
                 onSelect={() => run(onSignOut)}
-                className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm aria-selected:bg-accent/15"
+                className="flex cursor-pointer items-center  px-3 py-2 text-sm aria-selected:bg-foreground"
               >
                 Sign out
               </Command.Item>

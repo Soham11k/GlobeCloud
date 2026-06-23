@@ -1,8 +1,8 @@
-export const GEO_HEALTHY = "#2DD4A0";
-export const GEO_WARN = "#F0A84A";
-export const GEO_ERROR = "#f87171";
-export const GEO_ACCENT = "#5B52FF";
-export const SPACE_BG = "#03030A";
+export const GEO_HEALTHY = "#ffffff";
+export const GEO_WARN = "#888888";
+export const GEO_ERROR = "#d71921";
+export const GEO_ACCENT = "#d71921";
+export const SPACE_BG = "#000000";
 
 export const ARC_PAIRS: [number, number][] = [
   [0, 1],
@@ -25,7 +25,6 @@ export function variantCamera(variant: GlobeVariant): { position: [number, numbe
     case "ambient":
       return { position: [0.3, 0.2, 3.5], fov: 52 };
     default:
-      // Closer + offset left so the globe reads large beside the hero copy
       return { position: [-0.55, 0.12, 2.15], fov: 42 };
   }
 }
@@ -38,8 +37,8 @@ export function variantGlobeScale(variant: GlobeVariant): number {
   return variant === "hero" ? 1.18 : 1;
 }
 
-export function variantAnimateCamera(variant: GlobeVariant): boolean {
-  return variant === "hero";
+export function variantAnimateCamera(): boolean {
+  return false;
 }
 
 export function variantGlobeRotate(variant: GlobeVariant, reducedMotion: boolean): boolean {

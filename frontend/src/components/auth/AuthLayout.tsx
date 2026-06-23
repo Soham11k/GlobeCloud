@@ -1,14 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import { CinematicShell } from "@/components/layout/CinematicShell";
 import { SiteIconRail } from "@/components/layout/SiteIconRail";
-import { StatusDot } from "@/components/layout/StatusBadge";
+import { DotLabel } from "@/components/brand/DotLabel";
 import { AuthOAuth } from "@/components/auth/AuthOAuth";
 import { useLiveMetrics, useProduct } from "@/lib/hooks";
-import { fadeUp, pageVariants } from "@/lib/motion";
-import { useMotionPrefs } from "@/lib/useMotionPrefs";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "signup" | "plain";
@@ -36,13 +33,13 @@ function AuthTabs({ mode }: { mode: "login" | "signup" }) {
   const qs = nextQ.toString() ? `?${nextQ.toString()}` : "";
 
   return (
-    <div className="auth-tabs mb-8 grid grid-cols-2 gap-2" role="tablist" aria-label="Authentication">
+    <div className="auth-tabs mb-8 flex" role="tablist" aria-label="Authentication">
       <Link
         to={`/login${qs}`}
         role="tab"
         aria-selected={mode === "login"}
         aria-current={mode === "login" ? "page" : undefined}
-        className={cn("auth-tab", mode === "login" && "auth-tab-active")}
+        className={cn("auth-tab flex-1", mode === "login" && "auth-tab-active")}
       >
         Sign in
       </Link>
@@ -51,9 +48,9 @@ function AuthTabs({ mode }: { mode: "login" | "signup" }) {
         role="tab"
         aria-selected={mode === "signup"}
         aria-current={mode === "signup" ? "page" : undefined}
-        className={cn("auth-tab", mode === "signup" && "auth-tab-active")}
+        className={cn("auth-tab flex-1", mode === "signup" && "auth-tab-active")}
       >
-        Register
+        Create account
       </Link>
     </div>
   );
@@ -67,28 +64,23 @@ function AuthSidePanel({ compact }: { compact?: boolean }) {
   if (compact) {
     if (!router.length) return null;
     return (
-      <div className="mb-6 rounded-lg border border-border/40 bg-muted/10 px-4 py-3 lg:hidden">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">Live probes</p>
-        <ul className="flex flex-wrap gap-3">
-          {router.slice(0, 3).map((r) => (
-            <li key={r.region_id} className="flex items-center gap-1.5 font-mono text-[10px]">
-              <StatusDot status={r.healthy ? "ok" : "err"} />
-              {r.region_id}
-            </li>
-          ))}
-        </ul>
+      <div className="mb-6 border border-border px-4 py-3 lg:hidden">
+        <DotLabel className="mb-2">Live probes</DotLabel>
+        <p className="data-mono">
+          {router.slice(0, 3).map((r) => `${r.region_id} ${r.healthy ? "ok" : "down"}`).join(" · ")}
+        </p>
       </div>
     );
   }
 
   return (
-    <section className="hidden flex-1 flex-col justify-between border-r border-border/40 px-8 py-10 lg:flex xl:px-12">
+    <section className="hidden flex-1 flex-col justify-between border-r border-border px-8 py-10 lg:flex xl:px-12">
       <div>
-        <p className="font-mono text-xs text-muted-foreground">
+        <DotLabel>
           {product?.deployment_mode ?? "regional"}
           {router.length ? ` · ${router.length} regions` : ""}
-        </p>
-        <h1 className="mt-4 max-w-md text-2xl font-semibold tracking-tight">
+        </DotLabel>
+        <h1 className="mt-4 max-w-md text-2xl font-medium tracking-[-0.03em]">
           Multi-region Postgres routing on Fly.io
         </h1>
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
@@ -97,30 +89,26 @@ function AuthSidePanel({ compact }: { compact?: boolean }) {
         </p>
       </div>
       <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground">Live probes</p>
+        <DotLabel className="mb-3">Live probes</DotLabel>
         {router.length ? (
-          <ul className="space-y-1.5">
+          <ul className="divide-y divide-border border border-border">
             {router.map((r) => (
-              <li key={r.region_id} className="flex items-center justify-between font-mono text-xs">
-                <span className="flex items-center gap-2">
-                  <StatusDot status={r.healthy ? "ok" : "err"} />
-                  {r.region_id}
-                </span>
-                <span className={r.healthy ? "text-[var(--geo-healthy)]" : "text-[var(--geo-error)]"}>
-                  {r.latency_ms != null ? `${Math.round(r.latency_ms)}ms` : "—"}
+              <li key={r.region_id} className="flex items-center justify-between px-3 py-2.5 text-sm">
+                <span className="data-mono">{r.region_id}</span>
+                <span className={r.healthy ? "text-muted-foreground" : "text-[var(--color-danger)]"}>
+                  {r.healthy ? "ok" : "down"}
+                  {r.latency_ms != null ? ` · ${Math.round(r.latency_ms)} ms` : ""}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-muted-foreground">Waiting for probe data…</p>
+          <p className="text-sm text-muted-foreground">Waiting for probe data…</p>
         )}
         <div className="mt-6 flex gap-4 text-sm">
-          <Link to="/status" className="text-accent hover:underline">
-            Status page
-          </Link>
-          <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-            API reference
+          <Link to="/status" className="underline">Status</Link>
+          <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="underline">
+            API docs
           </a>
         </div>
       </div>
@@ -129,20 +117,7 @@ function AuthSidePanel({ compact }: { compact?: boolean }) {
 }
 
 function AuthCard({ children, className }: { children: ReactNode; className?: string }) {
-  const { reducedMotion } = useMotionPrefs();
-  if (reducedMotion) {
-    return <div className={cn("auth-card w-full max-w-md p-8", className)}>{children}</div>;
-  }
-  return (
-    <motion.div
-      className={cn("auth-card w-full max-w-md p-8", className)}
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={cn("auth-card w-full max-w-md p-8", className)}>{children}</div>;
 }
 
 export function AuthLayout({
@@ -171,7 +146,7 @@ export function AuthLayout({
           <div className="flex flex-1 items-center justify-center px-6 py-12">
             <AuthCard>
               {header}
-              <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+              <h1 ref={headingRef} tabIndex={-1} className="text-2xl outline-none">
                 {title}
               </h1>
               {subtitle && <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>}
@@ -194,7 +169,7 @@ export function AuthLayout({
             <AuthTabs mode={mode} />
             <AuthSidePanel compact />
             {header}
-            <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+            <h2 ref={headingRef} tabIndex={-1} className="text-2xl outline-none">
               {title}
             </h2>
             {subtitle && <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>}
@@ -204,18 +179,11 @@ export function AuthLayout({
               </div>
             )}
             {showOAuth && (
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border/60" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-[var(--auth-card-bg)] px-3 text-muted-foreground">or use email</span>
-                </div>
+              <div className="my-6 border-t border-border pt-4 text-center text-sm text-muted-foreground">
+                or use email
               </div>
             )}
-            <motion.div variants={fadeUp} initial="initial" animate="animate">
-              {children}
-            </motion.div>
+            <div>{children}</div>
             {footer}
           </AuthCard>
         </section>

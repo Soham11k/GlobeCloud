@@ -105,7 +105,7 @@ export function AgentPage() {
                   <Badge
                     key={q}
                     variant="accent"
-                    className="cursor-pointer hover:bg-accent/25"
+                    className="cursor-pointer hover:bg-foreground"
                     onClick={() => ask(q)}
                   >
                     {q}
@@ -121,7 +121,7 @@ export function AgentPage() {
                   "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
                   msg.role === "user"
                     ? "bg-accent text-accent-foreground rounded-br-md"
-                    : "bg-[var(--surface-2)] rounded-bl-md border border-border/40"
+                    : "bg-[var(--surface-2)] rounded-bl-md border border-foreground"
                 )}
               >
                 {msg.role === "agent" ? (
@@ -132,7 +132,7 @@ export function AgentPage() {
                   msg.content
                 )}
                 {msg.meta && (
-                  <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+                  <div className="mt-3 space-y-2 border-t border-foreground pt-3">
                     <div className="flex flex-wrap gap-2 text-xs">
                       {msg.meta.backend_region && <Chip variant="ok">{msg.meta.backend_region}</Chip>}
                       <Chip>{msg.meta.confidence}</Chip>
@@ -158,7 +158,7 @@ export function AgentPage() {
           ))}
           <div ref={bottomRef} />
         </div>
-        <div className="border-t border-border/40 bg-[var(--surface-0)] p-4">
+        <div className="border-t border-foreground bg-[var(--surface-0)] p-4">
           <div className="flex gap-2">
             <Input
               value={input}

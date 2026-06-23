@@ -21,7 +21,7 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-lg border border-[var(--geo-error)]/20 bg-[var(--geo-error)]/5 px-6 py-10 text-center",
+        "flex flex-col items-center justify-center  border border-[var(--geo-error)]/20 bg-[var(--geo-error)]/5 px-6 py-10 text-center",
         className
       )}
       role="alert"

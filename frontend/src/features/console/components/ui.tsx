@@ -39,7 +39,7 @@ export function Panel({
 }) {
   return (
     <div className={cn("console-panel overflow-hidden", className)}>
-      <div className="flex flex-row items-center justify-between border-b border-border/40 px-5 py-4">
+      <div className="flex flex-row items-center justify-between border-b border-border px-5 py-4">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         {action}
       </div>
@@ -50,10 +50,10 @@ export function Panel({
 
 export function Kpi({ label, value, sub, highlight }: { label: string; value: ReactNode; sub?: string; highlight?: boolean }) {
   return (
-    <div className={cn("console-panel p-5", highlight && "border-accent/30 ring-1 ring-accent/20")}>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
-      {sub && <p className="mt-1 data-mono text-xs text-muted-foreground">{sub}</p>}
+    <div className={cn("console-panel p-5", highlight && "border-accent")}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-2xl font-medium tabular-nums tracking-[-0.03em]">{value}</p>
+      {sub && <p className="mt-1 data-mono">{sub}</p>}
     </div>
   );
 }
@@ -75,17 +75,15 @@ export function DataTable({
       <TableHeader>
         <TableRow>
           {headers.map((h) => (
-            <TableHead key={h} className="text-xs uppercase tracking-wide">
-              {h}
-            </TableHead>
+            <TableHead key={h}>{h}</TableHead>
           ))}
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.map((row, i) => (
-          <TableRow key={i} className="border-border/40 hover:bg-muted/30">
+          <TableRow key={i}>
             {row.map((cell, j) => (
-              <TableCell key={j} className={j === 0 ? "font-medium" : "data-mono"}>
+              <TableCell key={j} className={j === 0 ? "font-bold" : ""}>
                 {cell}
               </TableCell>
             ))}
@@ -105,7 +103,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
       {children}
     </label>
   );

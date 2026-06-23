@@ -55,7 +55,7 @@ export function SignupPage() {
       footer={
         <p className="mt-8 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link to={loginLink} className="text-accent hover:underline">
+          <Link to={loginLink} className="underline">
             Sign in
           </Link>
         </p>

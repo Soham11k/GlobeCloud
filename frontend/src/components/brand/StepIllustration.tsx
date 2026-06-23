@@ -1,29 +1,32 @@
 export function StepIllustration({ step }: { step: "route" | "replicate" | "ask" }) {
+  const stroke = "currentColor";
+  const accent = "var(--nothing-red)";
   if (step === "route") {
     return (
-      <svg viewBox="0 0 120 80" className="w-full h-20" aria-hidden>
-        <circle cx="24" cy="40" r="6" fill="#5b52ff" opacity="0.9" />
-        <circle cx="96" cy="28" r="5" fill="#5b52ff" opacity="0.5" />
-        <circle cx="88" cy="58" r="5" fill="#5b52ff" opacity="0.35" />
-        <path d="M30 38 Q60 20 90 30" stroke="#5b52ff" strokeWidth="1.5" fill="none" strokeDasharray="4 3" />
+      <svg viewBox="0 0 160 72" className="h-16 w-full text-foreground/80" aria-hidden>
+        <circle cx="28" cy="36" r="8" fill="none" stroke={accent} strokeWidth="1.5" />
+        <circle cx="132" cy="22" r="6" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.7" />
+        <circle cx="120" cy="52" r="6" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.5" />
+        <path d="M36 34 Q80 8 126 24" fill="none" stroke={stroke} strokeWidth="1.5" strokeDasharray="4 5" />
       </svg>
     );
   }
   if (step === "replicate") {
     return (
-      <svg viewBox="0 0 120 80" className="w-full h-20" aria-hidden>
-        <rect x="16" y="24" width="28" height="32" rx="3" stroke="#5b52ff" strokeWidth="1.5" fill="none" />
-        <rect x="48" y="24" width="28" height="32" rx="3" stroke="#5b52ff" strokeWidth="1.5" fill="none" opacity="0.6" />
-        <rect x="80" y="24" width="28" height="32" rx="3" stroke="#5b52ff" strokeWidth="1.5" fill="none" opacity="0.35" />
-        <path d="M44 40h4M76 40h4" stroke="#5b52ff" strokeWidth="1.5" />
+      <svg viewBox="0 0 160 72" className="h-16 w-full text-foreground/80" aria-hidden>
+        <rect x="12" y="20" width="36" height="32" fill="none" stroke={stroke} strokeWidth="1.5" />
+        <rect x="62" y="20" width="36" height="32" fill="none" stroke={accent} strokeWidth="1.5" opacity="0.9" />
+        <rect x="112" y="20" width="36" height="32" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.45" />
+        <path d="M48 36h14M98 36h14" stroke={stroke} strokeWidth="1.5" />
       </svg>
     );
   }
   return (
-    <svg viewBox="0 0 120 80" className="w-full h-20" aria-hidden>
-      <rect x="20" y="16" width="80" height="48" rx="6" stroke="#5b52ff" strokeWidth="1.5" fill="none" />
-      <path d="M28 32h64M28 42h48M28 52h56" stroke="#5b52ff" strokeWidth="1" opacity="0.4" />
-      <rect x="28" y="28" width="12" height="3" rx="1" fill="#5b52ff" opacity="0.7" />
+    <svg viewBox="0 0 160 72" className="h-16 w-full text-foreground/80" aria-hidden>
+      <rect x="24" y="14" width="112" height="44" fill="none" stroke={stroke} strokeWidth="1.5" />
+      <line x1="36" y1="30" x2="124" y2="30" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="36" y1="40" x2="96" y2="40" stroke={stroke} strokeWidth="1" opacity="0.35" />
+      <rect x="36" y="24" width="28" height="4" fill={accent} opacity="0.85" />
     </svg>
   );
 }

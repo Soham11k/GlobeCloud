@@ -14,27 +14,19 @@ type Props = {
 
 export function LiveStatBar({ probes = [], syncInterval, knowledgeDocs, loading, className }: Props) {
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
+    <div className={cn("flex flex-wrap gap-2 text-xs", className)}>
       {loading
-        ? [...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-28 bg-muted/50" />)
+        ? [...Array(3)].map((_, i) => <Skeleton key={i} className="h-7 w-24" />)
         : probes.map((r) => (
-            <Badge
-              key={r.region_id}
-              variant={r.healthy ? "success" : "danger"}
-              className="font-mono text-[11px] border border-border/60 bg-[var(--surface-1)]"
-            >
+            <Badge key={r.region_id} variant={r.healthy ? "success" : "danger"}>
               {r.region_id} · {r.latency_ms != null ? `${Math.round(r.latency_ms)}ms` : "—"}
             </Badge>
           ))}
       {syncInterval != null && (
-        <Badge variant="accent" className="font-mono text-[11px] border border-border/60 bg-[var(--surface-1)]">
-          sync {syncInterval}s
-        </Badge>
+        <Badge variant="default">sync {syncInterval}s</Badge>
       )}
       {knowledgeDocs != null && (
-        <Badge variant="default" className="font-mono text-[11px] border border-border/60 bg-[var(--surface-1)]">
-          {knowledgeDocs} docs
-        </Badge>
+        <Badge variant="default">{knowledgeDocs} docs</Badge>
       )}
     </div>
   );

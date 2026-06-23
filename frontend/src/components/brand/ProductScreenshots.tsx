@@ -30,7 +30,7 @@ export function ProductScreenshots({ className }: { className?: string }) {
             type="button"
             onClick={() => setActive(v.id)}
             className={cn(
-              "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+              "px-3 py-1.5  text-sm font-medium transition-colors",
               active === v.id
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-muted"
@@ -40,7 +40,7 @@ export function ProductScreenshots({ className }: { className?: string }) {
           </button>
         ))}
       </div>
-      <div className="rounded-xl border border-border bg-background min-h-[220px] p-4 text-sm">
+      <div className=" border border-border bg-background min-h-[220px] p-4 text-sm">
         {active === "routing" && (
           mLoad ? (
             <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
@@ -49,7 +49,7 @@ export function ProductScreenshots({ className }: { className?: string }) {
               <p className="font-medium">Live router snapshot</p>
               {metrics?.router.length ? (
                 metrics.router.map((r) => (
-                  <div key={r.region_id} className="flex justify-between text-xs py-1.5 border-b border-border/50 last:border-0">
+                  <div key={r.region_id} className="flex justify-between text-xs py-1.5 border-b border-foreground last:border-0">
                     <span className="font-mono">{r.region_id}</span>
                     <div className="flex gap-2 items-center">
                       <Badge variant={r.healthy ? "success" : "danger"}>{r.healthy ? "ok" : "down"}</Badge>
@@ -77,7 +77,7 @@ export function ProductScreenshots({ className }: { className?: string }) {
               <p className="font-medium">Sync engine · {sync?.cycles ?? 0} cycles</p>
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(sync?.regions ?? {}).map(([region, info]) => (
-                  <div key={region} className="rounded-lg border border-border p-2 text-center">
+                  <div key={region} className=" border border-border p-2 text-center">
                     <p className="text-[10px] text-muted-foreground truncate">{region.split("-")[0]}</p>
                     <p className="text-xs font-medium mt-1">
                       {info.stats?.replication_log_entries ?? info.stats?.entries ?? "—"} log entries
@@ -102,7 +102,7 @@ export function ProductScreenshots({ className }: { className?: string }) {
                 {catalog?.knowledge_docs ?? "—"} docs indexed for RAG across regions.
               </p>
               {agentEvents.length ? (
-                <div className="rounded-lg border border-border p-3 bg-card text-xs space-y-2">
+                <div className=" border border-border p-3 bg-card text-xs space-y-2">
                   <p className="text-muted-foreground">Latest copilot query</p>
                   <p>{agentEvents[0].summary}</p>
                   {agentEvents[0].selected_region && (

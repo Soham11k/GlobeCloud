@@ -41,11 +41,11 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-        "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "flex items-center gap-3 border-l-2 px-3 py-2 text-sm font-medium",
+        "focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2",
         active
-          ? "bg-accent/12 text-accent"
-          : "text-muted-foreground hover:text-foreground",
+          ? "border-l-accent bg-muted/60 text-foreground"
+          : "border-l-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -62,7 +62,7 @@ function ConsoleNav({ isGateway, onNavigate }: { isGateway: boolean; onNavigate?
         if (!items.length) return null;
         return (
           <div key={group.label}>
-            <p className="mb-1.5 px-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="mb-1.5 px-3 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -121,13 +121,13 @@ export function AppShell() {
       <aside
         className="console-chrome hidden w-[var(--console-nav-width)] shrink-0 flex-col border-r sm:flex"
       >
-        <div className="flex h-[var(--header-height)] items-center border-b border-border/40 px-4">
+        <div className="flex h-[var(--header-height)] items-center border-b px-4">
           <Link to="/" className="flex min-w-0 items-center gap-2">
             <Logo className="h-6" />
           </Link>
         </div>
         <ConsoleNav isGateway={isGateway} />
-        <div className="mt-auto space-y-2 border-t border-border/40 p-3">
+        <div className="mt-auto space-y-2 border-t p-3">
           {user && (
             <div className="console-panel px-3 py-2">
               <p className="truncate text-sm font-medium">{user.name || user.email}</p>
@@ -175,7 +175,7 @@ export function AppShell() {
                   </p>
                 )}
               </div>
-              <Badge variant="accent" className="hidden capitalize sm:inline-flex">
+              <Badge variant="default" className="hidden capitalize sm:inline-flex">
                 {product?.deployment_mode ?? "—"}
               </Badge>
             </div>
@@ -187,7 +187,7 @@ export function AppShell() {
                 href="/api/docs"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-accent hover:underline"
+                className="inline-flex items-center gap-1 underline"
               >
                 API <ExternalLink className="h-3 w-3" />
               </a>
@@ -198,7 +198,7 @@ export function AppShell() {
               )}
             </div>
           </div>
-          <div className="border-t border-border/40 bg-[var(--surface-0)] px-4 py-1.5 md:px-6">
+          <div className="border-t bg-background px-4 py-1.5 md:px-6">
             <LivePingRail />
           </div>
         </header>
@@ -227,7 +227,7 @@ export function AppShell() {
                   key={to}
                   to={to}
                   className={cn(
-                    "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px]",
+                    "flex flex-1 flex-col items-center gap-0.5 border-r py-2 text-[10px] font-medium last:border-r-0",
                     active ? "text-accent" : "text-muted-foreground",
                   )}
                 >

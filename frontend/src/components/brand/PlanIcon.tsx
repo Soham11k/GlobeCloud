@@ -28,7 +28,7 @@ export function PlanIcon({
   const color = tierColor[tier];
   return (
     <div
-      className={cn("flex h-12 w-12 items-center justify-center rounded-lg border border-border/60", className)}
+      className={cn("flex h-12 w-12 items-center justify-center  border border-foreground", className)}
       style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}
     >
       <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden>

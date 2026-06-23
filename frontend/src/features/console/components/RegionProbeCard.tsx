@@ -32,7 +32,7 @@ export function RegionProbeCard({
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             <StatusDot status={healthy ? "ok" : "err"} />
             {healthy ? "Healthy" : "Unreachable"}
-            {isLocal && <span className="text-accent">· local</span>}
+            {isLocal && <span className="underline">· local</span>}
           </p>
         </div>
         <span

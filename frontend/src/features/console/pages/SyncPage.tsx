@@ -65,7 +65,7 @@ export function SyncPage() {
         {steps.map((step, i) => (
           <div key={step.label} className="flex items-center gap-2">
             <span
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-shadow ${
+              className={`flex h-8 w-8 items-center justify-center  text-xs font-medium transition-shadow ${
                 step.done
                   ? "bg-success/15 text-success"
                   : "bg-muted text-muted-foreground"

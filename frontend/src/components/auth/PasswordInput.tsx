@@ -60,7 +60,7 @@ export function PasswordStrength({ password }: { password: string }) {
           <div
             key={i}
             className={cn(
-              "h-1 flex-1 rounded-full bg-muted",
+              "h-1 flex-1  bg-muted",
               i < score && colors[score]
             )}
           />

@@ -1,13 +1,11 @@
 import { useMemo, useRef, useEffect, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Stars, Html, Line, useTexture } from "@react-three/drei";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
+import { Stars, Html, Line } from "@react-three/drei";
 import {
   QuadraticBezierCurve3,
   Vector3,
   Group,
   Mesh,
-  Color,
   DoubleSide,
 } from "three";
 import type { RegionInfo } from "@/lib/api";
@@ -45,11 +43,8 @@ function CameraRig({
   return null;
 }
 
-const EARTH_MAP = "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
-
 function EarthGlobe({ animate, scale = 1 }: { animate: boolean; scale?: number }) {
   const ref = useRef<Group>(null);
-  const colorMap = useTexture(EARTH_MAP);
 
   useFrame((_, delta) => {
     if (animate && ref.current) ref.current.rotation.y += delta * 0.05;
@@ -58,12 +53,12 @@ function EarthGlobe({ animate, scale = 1 }: { animate: boolean; scale?: number }
   return (
     <group ref={ref} rotation={[0.12, 0, 0]} scale={scale}>
       <mesh>
-        <sphereGeometry args={[1, 64, 64]} />
-        <meshStandardMaterial map={colorMap} roughness={0.9} metalness={0.05} />
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial color="#000000" wireframe />
       </mesh>
       <mesh>
-        <sphereGeometry args={[1.004, 40, 40]} />
-        <meshBasicMaterial color={GEO_ACCENT} wireframe transparent opacity={0.035} />
+        <sphereGeometry args={[1.002, 24, 24]} />
+        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.35} />
       </mesh>
     </group>
   );
@@ -71,21 +66,15 @@ function EarthGlobe({ animate, scale = 1 }: { animate: boolean; scale?: number }
 
 function ClientMarker({ lat, lon }: { lat: number; lon: number }) {
   const position = useMemo(() => latLonToVector3(lat, lon, 1.04), [lat, lon]);
-  const ringRef = useRef<Mesh>(null);
-  useFrame((state) => {
-    if (!ringRef.current) return;
-    const s = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.2;
-    ringRef.current.scale.setScalar(s);
-  });
   return (
     <group position={position}>
-      <mesh ref={ringRef}>
+      <mesh>
         <ringGeometry args={[0.05, 0.065, 32]} />
-        <meshBasicMaterial color="#f59e0b" transparent opacity={0.7} side={DoubleSide} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.7} side={DoubleSide} />
       </mesh>
       <mesh>
         <sphereGeometry args={[0.032, 12, 12]} />
-        <meshBasicMaterial color="#fbbf24" />
+        <meshBasicMaterial color="#ffffff" wireframe />
       </mesh>
     </group>
   );
@@ -123,9 +112,8 @@ function RegionMarker({
       </mesh>
       <mesh>
         <sphereGeometry args={[selected ? 0.038 : 0.028, 16, 16]} />
-        <meshBasicMaterial color={color} />
+        <meshBasicMaterial color={color} wireframe />
       </mesh>
-      <pointLight color={color} intensity={0.8} distance={0.5} />
       {showLabels && (
         <Html
           position={[0, 0.09, 0]}
@@ -243,7 +231,7 @@ function RegionArcs({ regions, animate }: { regions: RegionInfo[]; animate: bool
           key={`${a}-${b}`}
           start={positions[a]}
           end={positions[b]}
-          color={new Color(GEO_ACCENT).lerp(new Color("#2DD4A0"), 0.3).getStyle()}
+          color={GEO_ACCENT}
           animate={animate}
         />
       ))}
@@ -251,13 +239,8 @@ function RegionArcs({ regions, animate }: { regions: RegionInfo[]; animate: bool
   );
 }
 
-function SceneEffects({ enabled }: { enabled: boolean }) {
-  if (!enabled) return null;
-  return (
-    <EffectComposer multisampling={0}>
-      <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={1.2} mipmapBlur />
-    </EffectComposer>
-  );
+function SceneEffects() {
+  return null;
 }
 
 function SceneContent({
@@ -266,8 +249,6 @@ function SceneContent({
   healthy,
   variant,
   reducedMotion,
-  mobile,
-  enableBloom,
   client,
   selectedRegion,
 }: {
@@ -276,16 +257,13 @@ function SceneContent({
   healthy: Record<string, boolean>;
   variant: GlobeVariant;
   reducedMotion: boolean;
-  mobile: boolean;
-  enableBloom: boolean;
   client?: { lat: number; lon: number };
   selectedRegion?: string;
 }) {
   const animateGlobe = variantGlobeRotate(variant, reducedMotion);
-  const animateCamera = variantAnimateCamera(variant) && !reducedMotion;
+  const animateCamera = variantAnimateCamera() && !reducedMotion;
   const animateArcs = !reducedMotion;
-  const starCount = reducedMotion ? 0 : mobile ? 300 : 1200;
-  const useBloom = enableBloom && variant === "hero" && !mobile && !reducedMotion;
+  const starCount = 0;
   const globeScale = variantGlobeScale(variant);
   const lookAt = variantLookAt(variant);
   const cam = variantCamera(variant);
@@ -298,9 +276,8 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[SPACE_BG]} />
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[5, 2, 4]} intensity={1.4} color="#ffffff" />
-      <pointLight position={[-4, -1, 2]} intensity={0.35} color={GEO_ACCENT} />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 2, 4]} intensity={0.5} color="#ffffff" />
 
       {starCount > 0 && (
         <Stars radius={80} depth={50} count={starCount} factor={2.5} saturation={0} fade speed={animateGlobe ? 0.3 : 0} />
@@ -320,7 +297,7 @@ function SceneContent({
       {client && <ClientMarker lat={client.lat} lon={client.lon} />}
       <RegionArcs regions={regions} animate={animateArcs} />
       <CameraRig animate={animateCamera} lookAt={lookAt} basePosition={cam.position} />
-      <SceneEffects enabled={useBloom} />
+      <SceneEffects />
     </>
   );
 }
@@ -352,7 +329,6 @@ export function GlobeScene3D({
   healthy = {},
   reducedMotion = false,
   mobile = false,
-  enableBloom = true,
   variant = "hero",
   interactive = false,
   client,
@@ -376,8 +352,6 @@ export function GlobeScene3D({
           healthy={healthy}
           variant={variant}
           reducedMotion={reducedMotion}
-          mobile={mobile}
-          enableBloom={enableBloom}
           client={client}
           selectedRegion={selectedRegion}
         />

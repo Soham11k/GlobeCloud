@@ -32,7 +32,7 @@ export function GlobeScenePanel({
 }: Props) {
   return (
     <GeoVizPanel
-      className={cn("rounded-xl", className)}
+      className={cn(className)}
       regions={regions}
       latencies={latencies}
       healthy={healthy}

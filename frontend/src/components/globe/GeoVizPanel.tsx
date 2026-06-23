@@ -55,9 +55,9 @@ export function GeoVizPanel({
       />
 
       {showMapInset && variant !== "hero" && (
-        <div className="absolute bottom-2 right-2 z-10 w-[min(48%,220px)] overflow-hidden rounded-lg border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
-          <div className="border-b border-white/10 bg-black/60 px-2 py-0.5 text-[9px] font-medium uppercase tracking-widest text-muted-foreground">
-            Live map
+        <div className="absolute bottom-2 right-2 z-10 w-[min(48%,220px)] overflow-hidden border border-border bg-background">
+          <div className="border-b border-border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            LIVE MAP
           </div>
           <GlobeFallback2D
             className="h-[88px] w-full"

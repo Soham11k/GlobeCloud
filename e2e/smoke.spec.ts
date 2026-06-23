@@ -7,7 +7,7 @@ test("landing page loads", async ({ page }) => {
 
 test("welcome page loads", async ({ page }) => {
   await page.goto("/welcome");
-  await expect(page.getByRole("heading", { name: /everywhere/i })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: /globecloud console/i })).toBeVisible({ timeout: 15000 });
 });
 
 test("login page loads", async ({ page }) => {

@@ -28,7 +28,7 @@ export function AuthRedirect({ children }: Props) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--surface-0,#03030a)]">
         <Logo className="h-8 opacity-90" />
-        <div className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent,#5b52ff)] shadow-[0_0_12px_var(--accent-glow)]" />
+        <div className="h-2 w-2 animate-pulse  bg-[var(--accent,#5b52ff)] shadow-[0_0_12px_var(--accent-glow)]" />
       </div>
     );
   }

@@ -4,20 +4,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold tracking-[-0.02em] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-white/40 disabled:pointer-events-none disabled:opacity-40",
   {
     variants: {
       variant: {
-        default: "bg-accent text-accent-foreground hover:bg-accent/90",
-        secondary: "bg-muted text-foreground hover:bg-zinc-700 border border-border",
-        ghost: "hover:bg-muted",
-        outline: "border border-border bg-transparent hover:bg-muted",
+        default: "bg-accent text-accent-foreground hover:bg-[#b8121c]",
+        secondary: "bg-muted text-foreground hover:bg-[#1a1a1a]",
+        ghost: "text-foreground hover:bg-muted",
+        outline: "border border-border bg-transparent text-foreground hover:border-white/25 hover:bg-muted",
+        destructive: "bg-accent text-white hover:bg-[#b8121c]",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-9 w-9",
+        default: "h-10 px-5 py-2",
+        sm: "h-8 px-3 text-xs",
+        lg: "h-12 px-7 text-base",
+        icon: "h-10 w-10",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

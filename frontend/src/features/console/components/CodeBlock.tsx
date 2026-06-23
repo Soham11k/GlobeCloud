@@ -20,7 +20,7 @@ export function CodeBlock({ code, language = "bash", className }: Props) {
 
   return (
     <div className={cn("console-panel overflow-hidden", className)}>
-      <div className="flex items-center justify-between border-b border-border/40 px-3 py-1.5">
+      <div className="flex items-center justify-between border-b border-foreground px-3 py-1.5">
         <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
           {language}
         </span>

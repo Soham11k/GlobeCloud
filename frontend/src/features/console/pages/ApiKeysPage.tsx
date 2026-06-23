@@ -176,7 +176,7 @@ export function ApiKeysPage() {
               This is the only time the full key will be shown. Store it securely.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+          <div className="flex gap-2  border border-warning/30 bg-warning/5 p-3">
             <Input readOnly value={revealedKey ?? ""} className="font-mono text-xs" />
             <Button variant="outline" size="icon" onClick={() => revealedKey && copyKey(revealedKey)}>
               <Copy className="h-4 w-4" />
